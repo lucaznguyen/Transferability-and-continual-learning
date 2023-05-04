@@ -97,6 +97,8 @@ def main(args=None):
     # octe_seq = []
     logme_seq = []
     logme_buffer_seq = []
+    logme_model_seq = []
+    logme_simple_model_seq = []
     # logme_arxiv_seq = []
     full_accs_seq = []
     acc_seq = []
@@ -127,35 +129,38 @@ def main(args=None):
         datasets.random_setting.count_unique_label_list = []
         datasets.random_setting.sequence_sample_list = []
 
-        random_sample = sequence_label[0][0]
+        # random_sample = sequence_label[0][0]
 
-        for label in random_sample:
-            if label not in datasets.random_setting.unique_label_list:
-                datasets.random_setting.unique_label_list.append(label)
-        datasets.random_setting.count_unique_label_list.append(len(datasets.random_setting.unique_label_list))
+        # for label in random_sample:
+            # if label not in datasets.random_setting.unique_label_list:
+                # datasets.random_setting.unique_label_list.append(label)
+        # datasets.random_setting.count_unique_label_list.append(len(datasets.random_setting.unique_label_list))
 
-        datasets.random_setting.random_label_list.append(random_sample)
+        # datasets.random_setting.random_label_list.append(random_sample)
         
-        random_sample_list = sequence_sample[0][0]
+        # random_sample_list = sequence_sample[0][0]
         # random_sample_list = []
         # for c in range(datasets.random_setting.random_N_CLASSES_PER_TASK):
         #     random_sample_list.append(random.choice([300, 600, 900, 1200]))
         #     # random_sample_list.append(random.choice([1200]))
 
-        datasets.random_setting.random_N_SAMPLES_PER_CLASS.append(random_sample_list)
-        datasets.random_setting.sequence_sample_list.append(sum(random_sample_list))
+        # datasets.random_setting.random_N_SAMPLES_PER_CLASS.append(random_sample_list)
+        # datasets.random_setting.sequence_sample_list.append(sum(random_sample_list))
 
-        for t in range(1, datasets.random_setting.random_N_TASKS):
-            while 1:
+        for t in range(datasets.random_setting.random_N_TASKS):
+            if t == 0:
                 random_sample = random.sample(range(0, 9), datasets.random_setting.random_N_CLASSES_PER_TASK)
-                flag = 0
-                count = 0
-                for label in random_sample:
-                    if label in datasets.random_setting.unique_label_list:
-                        count = count + 1
-                if count == datasets.random_setting.random_N_CLASSES_PER_TASK - datasets.random_setting.random_N_CLASSES_PER_TASK:
-                    flag = 1
-                    break
+            else:
+                while 1:
+                    random_sample = random.sample(range(0, 9), datasets.random_setting.random_N_CLASSES_PER_TASK)
+                    flag = 0
+                    count = 0
+                    for label in random_sample:
+                        if label in datasets.random_setting.unique_label_list:
+                            count = count + 1
+                    if count == 2:
+                        flag = 1
+                        break
             # random_sample = sequence_label[s][t]
             # random_sample = random.sample(range(0, 9), datasets.random_setting.random_N_CLASSES_PER_TASK)
 
@@ -166,11 +171,11 @@ def main(args=None):
 
             datasets.random_setting.random_label_list.append(random_sample)
             
-            random_sample_list = sequence_sample[s][t]
-            # random_sample_list = []
-            # for c in range(datasets.random_setting.random_N_CLASSES_PER_TASK):
-            #     random_sample_list.append(random.choice([300, 600, 900, 1200]))
-            #     # random_sample_list.append(random.choice([1200]))
+            # random_sample_list = sequence_sample[s][t]
+            random_sample_list = []
+            for c in range(datasets.random_setting.random_N_CLASSES_PER_TASK):
+                # random_sample_list.append(random.choice([300, 600, 900, 1200]))
+                random_sample_list.append(random.choice([1200]))
 
             datasets.random_setting.random_N_SAMPLES_PER_CLASS.append(random_sample_list)
             datasets.random_setting.sequence_sample_list.append(sum(random_sample_list))
@@ -202,7 +207,7 @@ def main(args=None):
         setproctitle.setproctitle('{}_{}_{}'.format(args.model, args.buffer_size if 'buffer_size' in args else 0, args.dataset))     
 
         if isinstance(dataset, ContinualDataset):
-            full_accs, bwt, total_forget, acc, complex_1epoch, complex_25epoch, complex_50epoch, leep, leep_buffer, logme, logme_buffer, leep_1stacc, bwt_leep = train_random(model, dataset, args)
+            full_accs, bwt, total_forget, acc, complex_1epoch, complex_25epoch, complex_50epoch, leep, leep_buffer, logme, logme_buffer, logme_model, logme_simple_model, leep_1stacc, bwt_leep = train_random(model, dataset, args)
             full_accs_seq.append(full_accs)
             acc_seq.append(acc)
             bwt_seq.append(bwt)
@@ -214,6 +219,8 @@ def main(args=None):
             leep_buffer_seq.append(leep_buffer)
             logme_seq.append(logme)
             logme_buffer_seq.append(logme_buffer)
+            logme_model_seq.append(logme_model)
+            logme_simple_model_seq.append(logme_simple_model)
             # octe_seq.append(octe)
             # logme_arxiv_seq.append(logme_arxiv)
             leep_1stacc_seq.append(leep_1stacc)
@@ -232,6 +239,8 @@ def main(args=None):
             print("leep_buffer = ", leep_buffer_seq)
             print("logme = ", logme_seq)
             print("logme_buffer = ", logme_buffer_seq)
+            print("logme_model = ", logme_model_seq)
+            print("logme_simple_model = ", logme_simple_model_seq)
             # print("octe = ", octe_seq)
             # print("logme_arxiv = ", logme_arxiv_seq)
             print("leep_1stacc = ", leep_1stacc_seq)
