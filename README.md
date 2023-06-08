@@ -1,13 +1,11 @@
-# Mammoth - An Extendible (General) Continual Learning Framework for Pytorch
+# Relationship between Transferability and Continual learning
 
 ## NEWS
-
-**STAY TUNED:** The additional code for the MiniImagenet and NTU-60 experiments will be uploaded soon due to complications in the distribution of datasets.
 
 -----------------------------
 
 
-Official repository of [Class-Incremental Continual Learning into the eXtended DER-verse](https://arxiv.org/abs/2201.00766) and [Dark Experience for General Continual Learning: a Strong, Simple Baseline](https://papers.nips.cc/paper/2020/hash/b704ea2c39778f07c617f6b7ce480e9e-Abstract.html)
+Official repository of Relationship between Transferability and Continual learning
 
 <p align="center">
   <img width="112" height="112" src="seq_mnist.gif" alt="Sequential MNIST">
@@ -21,76 +19,13 @@ Official repository of [Class-Incremental Continual Learning into the eXtended D
 ## Setup
 
 + Use `./utils/main.py` to run experiments.
-+ Use argument `--load_best_args` to use the best hyperparameters from the paper.
-+ New models can be added to the `models/` folder.
-+ New datasets can be added to the `datasets/` folder.
-
-## Models
-
-+ eXtended-DER (X-DER)
-
-+ Dark Experience Replay (DER)
-+ Dark Experience Replay++ (DER++)
-
-+ Learning a Unified Classifier Incrementally via Rebalancing (LUCIR)
-+ Greedy Sampler and Dumb Learner (GDumb)
-+ Bias Correction (BiC)
-+ Regular Polytope Classifier (RPC)
-
-+ Gradient Episodic Memory (GEM)
-+ A-GEM
-+ A-GEM with Reservoir (A-GEM-R)
-+ Experience Replay (ER)
-+ Meta-Experience Replay (MER)
-+ Function Distance Regularization (FDR)
-+ Greedy gradient-based Sample Selection (GSS)
-+ Hindsight Anchor Learning (HAL)
-+ Incremental Classifier and Representation Learning (iCaRL)
-+ online Elastic Weight Consolidation (oEWC)
-+ Synaptic Intelligence
-+ Learning without Forgetting
-+ Progressive Neural Networks
-
-## Datasets
-
-**Class-Il / Task-IL settings**
-
-+ Sequential MNIST
-+ Sequential CIFAR-10
-+ Sequential Tiny ImageNet
-+ Sequential CIFAR-100
-
-**Domain-IL settings**
-
-+ Permuted MNIST
-+ Rotated MNIST
-
-**General Continual Learning setting**
-
-+ MNIST-360
-
-## Citing these works
-
++ Note that argument `--case` is the name of the corresponding file in the `./benchmark` folder.
++ Percentage of buffer used in each class is $\frac{\text{buffer_size}/\text{n_class_per_task}}{\text{n_sample_per_class}}$.
++ Run the experiments on 5 task in CIFAR-10 dataset:
 ```
-@article{boschini2022class,
-  title={Class-Incremental Continual Learning into the eXtended DER-verse},
-  author={Boschini, Matteo and Bonicelli, Lorenzo and Buzzega, Pietro and Porrello, Angelo and Calderara, Simone},
-  journal={arXiv preprint arXiv:2201.00766},
-  year={2022}
-}
-
-@inproceedings{buzzega2020dark,
- author = {Buzzega, Pietro and Boschini, Matteo and Porrello, Angelo and Abati, Davide and Calderara, Simone},
- booktitle = {Advances in Neural Information Processing Systems},
- editor = {H. Larochelle and M. Ranzato and R. Hadsell and M. F. Balcan and H. Lin},
- pages = {15920--15930},
- publisher = {Curran Associates, Inc.},
- title = {Dark Experience for General Continual Learning: a Strong, Simple Baseline},
- volume = {33},
- year = {2020}
-}
+python utils/main.py --model derpp --dataset random-cifar10 --n_class_per_task 3 --n_task_per_seq 5 --case cifar10_357911 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.1 --beta 0.5 --n_epochs 50
 ```
-
-## Previous versions
-
-If you're interested in a version of this repo that only includes the code for [Dark Experience for General Continual Learning: a Strong, Simple Baseline](https://papers.nips.cc/paper/2020/hash/b704ea2c39778f07c617f6b7ce480e9e-Abstract.html), please use our [neurips2020 tag](https://github.com/aimagelab/mammoth/releases/tag/neurips2020).
++ Run the experiments on 3 task in MNIST dataset:
+```
+python utils/main.py --model derpp --dataset random-mnist --n_class_per_task 3 --n_task_per_seq 3 --case 359 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.1 --beta 0.5 --n_epochs 50
+```
