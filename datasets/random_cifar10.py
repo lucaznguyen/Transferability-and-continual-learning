@@ -15,6 +15,8 @@ from typing import Tuple
 from datasets.transforms.denormalization import DeNormalize
 import random
 
+import datasets.random_setting
+
 class MyCIFAR10(CIFAR10):
     """
     Overrides the CIFAR10 dataset to change the getitem function.
@@ -53,27 +55,17 @@ class MyCIFAR10(CIFAR10):
 class RandomCIFAR10(ContinualDataset):
 
     NAME = 'random-cifar10'
-    SETTING = 'class-il'
-    N_CLASSES_PER_TASK = 2
-    N_TASKS = 2
-    HEAD = 'multi' #multi or single
-    N_EXAMPLE = 300
+    SETTING = datasets.random_setting.SETTING
+    N_CLASSES_PER_TASK = datasets.random_setting.random_N_CLASSES_PER_TASK
+    N_TASKS = datasets.random_setting.random_N_TASKS
+    # HEAD = 'multi' #multi or single
+    # N_EXAMPLE = 300
     TRANSFORM = transforms.Compose(
             [transforms.RandomCrop(32, padding=4),
              transforms.RandomHorizontalFlip(),
              transforms.ToTensor(),
              transforms.Normalize((0.4914, 0.4822, 0.4465),
                                   (0.2470, 0.2435, 0.2615))])
-
-    random_label_list = []
-    for t in range(N_TASKS):
-        random_label = []
-        while len(random_label)<N_CLASSES_PER_TASK:
-            rand_num = random.randint(0, 9)
-            while rand_num in random_label:
-                rand_num = random.randint(0, 9)
-            random_label.append(rand_num)
-        random_label_list.append(random_label)
 
     def get_data_loaders(self):
         transform = self.TRANSFORM
@@ -91,7 +83,9 @@ class RandomCIFAR10(ContinualDataset):
                                    download=True, transform=test_transform)
 
         train, test = store_masked_loaders_random(train_dataset, test_dataset, 
-                                                self.random_label_list, self.HEAD, self.N_EXAMPLE, self)
+                                datasets.random_setting.random_label_list,
+                                datasets.random_setting.random_N_SAMPLES_PER_CLASS,
+                                datasets.random_setting.unique_label_list, self)
         return train, test
 
     @staticmethod
@@ -102,10 +96,15 @@ class RandomCIFAR10(ContinualDataset):
 
     @staticmethod
     def get_backbone():
-        if RandomCIFAR10.HEAD == 'single':
-            return resnet18(10)
+        if RandomCIFAR10.SETTING == 'class-il':
+            return resnet18(len(datasets.random_setting.unique_label_list))
         return resnet18(RandomCIFAR10.N_TASKS
                         * RandomCIFAR10.N_CLASSES_PER_TASK)
+    # def get_backbone():
+    #     if RandomCIFAR10.HEAD == 'single':
+    #         return resnet18(10)
+    #     return resnet18(RandomCIFAR10.N_TASKS
+    #                     * RandomCIFAR10.N_CLASSES_PER_TASK)
 
     @staticmethod
     def get_loss():
