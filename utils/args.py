@@ -20,12 +20,16 @@ def add_experiment_args(parser: ArgumentParser) -> None:
                         help='Model name.', choices=get_all_models())
     parser.add_argument('--num_seq', type=int, required=True,
                         help='Number of sequence')
-    # parser.add_argument('--setting', type=str, required=True,
-    #                     help='Which setting to perform experiments on.')
-    # parser.add_argument('--n_class_per_task', type=int, required=True,
-    #                     help='number of class per task.')
-    # parser.add_argument('--n_task_per_seq', type=int, required=True,
-    #                     help='numer of task per sequence.')
+    parser.add_argument('--case', type=str, required=True,
+                        help='Which case to perform experiments on.')
+    parser.add_argument('--n_class_per_task', type=int, required=True,
+                        help='number of class per task.')
+    parser.add_argument('--n_task_per_seq', type=int, required=True,
+                        help='numer of task per sequence.')
+    parser.add_argument('--offline_complexity', type=int, required=True,
+                        help='calculate complexity 50 epoch?')
+    parser.add_argument('--offline_logme', type=int, required=True,
+                        help='calculate logme simple model 50 epoch?')
 
     parser.add_argument('--lr', type=float, required=True,
                         help='Learning rate.')
@@ -35,7 +39,7 @@ def add_experiment_args(parser: ArgumentParser) -> None:
     parser.add_argument('--optim_mom', type=float, default=0.,
                         help='optimizer momentum.')
     parser.add_argument('--optim_nesterov', type=int, default=0,
-                        help='optimizer nesterov momentum.')    
+                        help='optimizer nesterov momentum.')
 
     parser.add_argument('--n_epochs', type=int,
                         help='Batch size.')

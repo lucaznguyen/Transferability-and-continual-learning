@@ -11,6 +11,7 @@ from utils.LogME import LogME
 from torch.utils.data import DataLoader
 
 from backbone.MNISTMLP import MNISTMLP
+from backbone.ResNet18 import resnet18
 from utils.status import progress_bar, create_stash
 from utils.tb_logger import *
 from utils.loggers import *
@@ -24,6 +25,13 @@ from datasets import get_dataset
 import math
 import random
 import sys
+
+import torch.nn as nn
+from torch.optim import SGD
+import torch
+import torchvision
+from utils.conf import get_device
+
 from models import get_model
 
 from itertools import permutations
@@ -115,7 +123,7 @@ def get_simple_logme(model: MNISTMLP, dataset: ContinualDataset, train_loader: D
     """
     t: task index
     """
-    print("calbuffer", cal_buffer)
+    # print("calbuffer", cal_buffer)
     
     features_arr = []
     # outputs_arr = []
@@ -176,12 +184,12 @@ def get_simple_logme(model: MNISTMLP, dataset: ContinualDataset, train_loader: D
     # outputs_arr = np.array(outputs_arr)
 
     # print("len(features_arr)", np.shape(features_arr))
-    print("features_arr:", features_arr)
+    # print("features_arr:", features_arr)
     # print("outputs_arr:", outputs_arr)
     # print("len(outputs_arr)", len(outputs_arr[0]))     
     target_label = np.array(labels_arr)
-    print("len(target_label)", target_label)
-    print("unique_target_label:", list(set(target_label)))
+    # print("len(target_label)", target_label)
+    # print("unique_target_label:", list(set(target_label)))
 
     if dataset.SETTING == "task-il":
         alternate_label = labels_arr.copy()
@@ -190,10 +198,10 @@ def get_simple_logme(model: MNISTMLP, dataset: ContinualDataset, train_loader: D
                 alternate_label[i] = stay_list[need_to_change_list.index(alternate_label[i])]
         alternate_label = np.array(alternate_label)
 
-        print("unique_alternate_label:", list(set(alternate_label)))
-        print("LogMe score by feature: ", logme.fit(features_arr, alternate_label))
+        # print("unique_alternate_label:", list(set(alternate_label)))
+        # print("LogMe score by feature: ", logme.fit(features_arr, alternate_label))
         pred = np.array(logme.predict(features_arr))
-        print("LogMe Acc: ", sum([pred[i] == alternate_label[i] for i in range(len(pred))])/len(pred))
+        # print("LogMe Acc: ", sum([pred[i] == alternate_label[i] for i in range(len(pred))])/len(pred))
 
 
         return logme.fit(features_arr, alternate_label)
@@ -218,11 +226,69 @@ def get_simple_logme(model: MNISTMLP, dataset: ContinualDataset, train_loader: D
         # return max(logme_value)
 
 
-    print("LogMe score by feature: ", logme.fit(features_arr, target_label))
+    # print("LogMe score by feature: ", logme.fit(features_arr, target_label))
     # print("LogMe score by outputs: ", logme.fit(outputs_arr, target_label))
-    print("ACCS AT LOGME WITH TRAINING DATA:", correct / total * 100)
+    # print("ACCS AT LOGME WITH TRAINING DATA:", correct / total * 100)
                 
     return logme.fit(features_arr, target_label)
+
+def simple_model_logme_score(args: Namespace, epoch: int, dataset: ContinualDataset, train_data_list: list, t: int,
+                get_data_sample_from_current_task: list, get_data_label_from_current_task: list,
+                need_to_change_list: list, stay_list: list):
+    
+    simple_loss = torch.nn.CrossEntropyLoss()
+
+    if args.dataset == "random-mnist":
+        if dataset.SETTING == "task-il":
+            simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
+        if dataset.SETTING == "class-il":
+            simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
+    elif args.dataset == "random-cifar10":
+        if dataset.SETTING == "task-il":
+            simple_model = resnet18(dataset.N_CLASSES_PER_TASK)
+        if dataset.SETTING == "class-il":
+            simple_model = resnet18(datasets.random_setting.count_unique_label_list[t])
+
+    optimizer = torch.optim.SGD(simple_model.parameters(), lr= 0.01, weight_decay=0.0001)
+
+    for epoch in range(epoch):
+        count = 0
+        for i, data in enumerate(train_data_list[dataset.N_TASKS-1]):
+
+            inputs, labels, not_aug_inputs = data
+
+            optimizer.zero_grad()
+            
+            outputs = simple_model(inputs)
+            new_labels = []
+            if dataset.SETTING == "task-il":
+                for ele in labels:
+                    new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
+                labels = torch.LongTensor(new_labels)
+
+            loss_function = simple_loss(outputs, labels)
+            loss_function.backward()
+            
+            optimizer.step()
+
+            progress_bar(i, len(train_data_list[dataset.N_TASKS-1]), epoch, t, float(loss_function))
+
+    logme_simple_model_score = []
+
+    for t in range(dataset.N_TASKS):
+        need_to_change_list = list(range(t*dataset.N_CLASSES_PER_TASK, t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
+        # stay_list = need_to_change_list.copy()
+        stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+        logme_simple_model_score.append(get_simple_logme(simple_model, dataset, train_data_list[t], t,
+                                         get_data_sample_from_current_task,
+                                         get_data_label_from_current_task,
+                                         need_to_change_list, stay_list,
+                                         cal_buffer = False))
+        
+    del simple_model
+    del simple_loss
+    return logme_simple_model_score
+
 def get_logme(model: ContinualModel, dataset: ContinualDataset, train_loader: DataLoader, t: int,
               sample_datapoint: list, label_datapoint: list,
               need_to_change_list: list, stay_list: list,
@@ -230,7 +296,7 @@ def get_logme(model: ContinualModel, dataset: ContinualDataset, train_loader: Da
     """
     t: task index
     """
-    print("calbuffer", cal_buffer)
+    # print("calbuffer", cal_buffer)
     
     features_arr = []
     # outputs_arr = []
@@ -291,12 +357,12 @@ def get_logme(model: ContinualModel, dataset: ContinualDataset, train_loader: Da
     # outputs_arr = np.array(outputs_arr)
 
     # print("len(features_arr)", np.shape(features_arr))
-    print("features_arr:", features_arr)
+    # print("features_arr:", features_arr)
     # print("outputs_arr:", outputs_arr)
     # print("len(outputs_arr)", len(outputs_arr[0]))     
     target_label = np.array(labels_arr)
-    print("len(target_label)", target_label)
-    print("unique_target_label:", list(set(target_label)))
+    # print("len(target_label)", target_label)
+    # print("unique_target_label:", list(set(target_label)))
 
     if dataset.SETTING == "task-il":
         alternate_label = labels_arr.copy()
@@ -305,10 +371,10 @@ def get_logme(model: ContinualModel, dataset: ContinualDataset, train_loader: Da
                 alternate_label[i] = stay_list[need_to_change_list.index(alternate_label[i])]
         alternate_label = np.array(alternate_label)
 
-        print("unique_alternate_label:", list(set(alternate_label)))
-        print("LogMe score by feature: ", logme.fit(features_arr, alternate_label))
+        # print("unique_alternate_label:", list(set(alternate_label)))
+        # print("LogMe score by feature: ", logme.fit(features_arr, alternate_label))
         pred = np.array(logme.predict(features_arr))
-        print("LogMe Acc: ", sum([pred[i] == alternate_label[i] for i in range(len(pred))])/len(pred))
+        # print("LogMe Acc: ", sum([pred[i] == alternate_label[i] for i in range(len(pred))])/len(pred))
 
 
         return logme.fit(features_arr, alternate_label)
@@ -333,9 +399,9 @@ def get_logme(model: ContinualModel, dataset: ContinualDataset, train_loader: Da
         # return max(logme_value)
 
 
-    print("LogMe score by feature: ", logme.fit(features_arr, target_label))
+    # print("LogMe score by feature: ", logme.fit(features_arr, target_label))
     # print("LogMe score by outputs: ", logme.fit(outputs_arr, target_label))
-    print("ACCS AT LOGME WITH TRAINING DATA:", correct / total * 100)
+    # print("ACCS AT LOGME WITH TRAINING DATA:", correct / total * 100)
                 
     return logme.fit(features_arr, target_label)
 
@@ -396,7 +462,7 @@ def get_octe(model: ContinualModel, dataset: ContinualDataset,
     # compute the conditonal entropy (ce)
     ce = compute_CE(P, previous_label_arr, pseudo_current_label_arr)
 
-    print("OCTE score: ", ce)
+    # print("OCTE score: ", ce)
                 
     return ce
 
@@ -489,16 +555,24 @@ def get_leep(model: ContinualModel, dataset: ContinualDataset, train_loader: Dat
                 
     return LEEP(pseudo_source_label, target_label)
 
-def simple_complexity(dataset: ContinualDataset, train_loader: DataLoader, num_epoch: int, t: int):
+def simple_complexity(args: Namespace, dataset: ContinualDataset, train_loader: DataLoader, num_epoch: int, t: int):
     
     print("SIMPLE MODEL WITH", num_epoch, "TRAINING AT TASK", t+1)
     
     simple_loss = torch.nn.CrossEntropyLoss()
-    if dataset.SETTING == "task-il":
-        simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
-    if dataset.SETTING == "class-il":
-        simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
-    simple_model.net.train()
+
+    if str(args.dataset) == "random-mnist":
+        if dataset.SETTING == "task-il":
+            simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
+        if dataset.SETTING == "class-il":
+            simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
+    elif str(args.dataset) == "random-cifar10":
+        # print("ok")
+        if dataset.SETTING == "task-il":
+            simple_model = resnet18(dataset.N_CLASSES_PER_TASK)
+            # print("ok nua roi")
+        if dataset.SETTING == "class-il":
+            simple_model = resnet18(datasets.random_setting.count_unique_label_list[t])
 
     optimizer = torch.optim.SGD(simple_model.parameters(), lr= 0.01, weight_decay=0.0001)
 
@@ -591,8 +665,8 @@ def evaluate_random(model: ContinualModel, dataset: ContinualDataset, last=False
         for lab in label_list:
             count_list[set_label.index(lab)] = count_list[set_label.index(lab)] + 1
 
-        print("set_label", set_label)
-        print("count_list", count_list)
+        # print("set_label", set_label)
+        # print("count_list", count_list)
 
         correct, total = 0.0, 0.0
         for data in test_loader:
@@ -616,6 +690,91 @@ def evaluate_random(model: ContinualModel, dataset: ContinualDataset, last=False
     model.net.train(status)
     return accs
 
+def linear_probing(model: ContinualModel, dataset: ContinualDataset,
+                   train_loader: DataLoader, test_loader: DataLoader, t: int,
+                   k: int, epoch: int) -> float:
+    """
+    model: Continual model
+    dataset: Current benchmark
+    train_loader: Training data
+    test_loader: Testing data
+    t: current task index
+    k: example per class (low)
+    epoch: num of epoch
+    """
+
+    linear_probing_model = nn.Sequential(
+        nn.Linear(100, dataset.N_CLASSES_PER_TASK)
+    )
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(linear_probing_model.parameters(), lr=0.001)
+
+    dict_k_sample = {}
+    for i in range(len(dataset.N_CLASSES_PER_TASK)):
+        dict_k_sample[str(i)] = 0
+    list_k_input = []
+    list_k_label = []
+
+    # print("dict:", dict_k_sample)
+    
+    for _, data in enumerate(train_loader):
+        flag = 1
+        inputs, labels, _ = data
+        labels = labels - t*dataset.N_CLASSES_PER_TASK
+        if dict_k_sample[str(labels)]<k:
+            dict_k_sample[str(labels)] += 1
+            list_k_input.append(inputs)
+            list_k_label.append(labels)
+        
+        for key in dict_k_sample.keys:
+            if dict_k_sample[key]<k:
+                flag = 0
+                break
+        if flag == 1:
+            break
+
+    # Train the model
+    for epoch in range(epoch):
+        for i in range(len(list_k_input)):
+        # for _, data in enumerate(train_loader):
+            inputs, labels = list_k_input[i], list_k_label[i]
+            # print("inputs", inputs)
+            if hasattr(model, 'device'):
+                inputs, labels = inputs.to(model.device), labels.to(model.device)
+
+            optimizer.zero_grad()
+            features = model(x = inputs, big_returnt = "features")
+            outputs = linear_probing_model(features)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        for data in test_loader:
+            inputs, labels = data
+
+            features = model(x = inputs, big_returnt = "features")
+            labels = labels - t*dataset.N_CLASSES_PER_TASK
+
+            outputs = linear_probing_model(features)
+
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    accuracy = 100 * correct / total
+
+    # print("acc k shot using "+str(epoch)+":", accuracy)
+
+    del linear_probing_model
+    del criterion
+    del optimizer
+
+    return accuracy
+
 def train_random(model: ContinualModel, dataset: ContinualDataset,
           args: Namespace) -> None:
     """
@@ -632,8 +791,12 @@ def train_random(model: ContinualModel, dataset: ContinualDataset,
     logme_score = []
     logme_buffer_score = []
     logme_model_score = []
-    logme_simple_model_score = []
-    # logme_arxiv_score = []
+    logme_simple_model_score_1epoch = []
+    logme_simple_model_score_50epoch = []
+    
+    linear_probing_score_1epoch = []
+    linear_probing_score_50epoch = []
+
     complex_list_1epoch = []
     complex_list_25epoch = []
     complex_list_50epoch = [] 
@@ -716,6 +879,12 @@ def train_random(model: ContinualModel, dataset: ContinualDataset,
                                          get_data_label_from_current_task,
                                          need_to_change_list, stay_list,
                                          cal_buffer = True))
+            # linear_probing_score_1epoch.append(linear_probing(model, dataset,
+                                                            #   train_loader, test_loader, t,
+                                                            #   5, 1))
+            # linear_probing_score_50epoch.append(linear_probing(model, dataset,
+                                                            #   train_loader, test_loader, t,
+                                                            #   5, 50))
             # logme_arxiv_score.append(logme02)
             results[t-1] = results[t-1] + accs
 
@@ -772,7 +941,7 @@ def train_random(model: ContinualModel, dataset: ContinualDataset,
     
         # torch.save(model.net.state_dict(), "save/task"+str(t+1)+"classil35.pt")
 
-        print("accs", accs)
+        # print("accs", accs)
 
         results.append(accs)
 
@@ -786,19 +955,22 @@ def train_random(model: ContinualModel, dataset: ContinualDataset,
         print("Accuracy for task(s):", t+1, " ", "["+dataset.SETTING+"]",":", mean_acc)
 
         # 1 epoch
-        complex_1epoch = simple_complexity(dataset, train_loader, 1, t)
+        complex_1epoch = simple_complexity(args, dataset, train_loader, 1, t)
         complex_list_1epoch.append(complex_1epoch)
         total_complex_1epoch = total_complex_1epoch + complex_1epoch
         print("complex 1 epoch", complex_1epoch)
 
         #25 epoch
-        complex_25epoch = 0#simple_complexity(dataset, train_loader, 25, t)
+        complex_25epoch = 0#simple_complexity(args, dataset, train_loader, 25, t)
         complex_list_25epoch.append(complex_25epoch)
         total_complex_25epoch = total_complex_25epoch + complex_25epoch
         print("complex 25 epoch", complex_25epoch)
 
         #50 epoch
-        complex_50epoch = simple_complexity(dataset, train_loader, 50, t)
+        if args.offline_complexity:
+            complex_50epoch = simple_complexity(args, dataset, train_loader, 50, t)
+        else:
+            complex_50epoch = 0
         complex_list_50epoch.append(complex_50epoch)
         total_complex_50epoch = total_complex_50epoch + complex_50epoch
         print("complex 50 epoch", complex_50epoch)
@@ -846,50 +1018,63 @@ def train_random(model: ContinualModel, dataset: ContinualDataset,
                                          get_data_label_from_current_task,
                                          need_to_change_list, stay_list,
                                          cal_buffer = False))
-        
-    simple_loss = torch.nn.CrossEntropyLoss()
-    if dataset.SETTING == "task-il":
-        simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
+
+    logme_simple_model_score_1epoch = simple_model_logme_score(args, 1, dataset, train_data_list, t,
+                get_data_sample_from_current_task, get_data_label_from_current_task,
+                need_to_change_list, stay_list)
+    if args.offline_logme:
+        logme_simple_model_score_50epoch = simple_model_logme_score(args, 50, dataset, train_data_list, t,
+                    get_data_sample_from_current_task, get_data_label_from_current_task,
+                    need_to_change_list, stay_list)
+    else:
+        logme_simple_model_score_50epoch = 0
+    # simple_loss = torch.nn.CrossEntropyLoss()
+    # if dataset.SETTING == "task-il":
+    #     simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
 
     # if dataset.SETTING == "class-il":
     #     simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
-    # simple_model.net.train()
 
-    optimizer = torch.optim.SGD(simple_model.parameters(), lr= 0.01, weight_decay=0.0001)
+    # optimizer = torch.optim.SGD(simple_model.parameters(), lr= 0.01, weight_decay=0.0001)
 
-    for epoch in range(1):
-        count = 0
-        for i, data in enumerate(train_data_list[dataset.N_TASKS-1]):
+    # for epoch in range(1):
+    #     count = 0
+    #     for i, data in enumerate(train_data_list[dataset.N_TASKS-1]):
 
-            inputs, labels, not_aug_inputs = data
+    #         inputs, labels, not_aug_inputs = data
 
-            optimizer.zero_grad()
+    #         optimizer.zero_grad()
             
-            outputs = simple_model(inputs)
-            new_labels = []
-            if dataset.SETTING == "task-il":
-                for ele in labels:
-                    new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
-                labels = torch.LongTensor(new_labels)
+    #         outputs = simple_model(inputs)
+    #         new_labels = []
+    #         if dataset.SETTING == "task-il":
+    #             for ele in labels:
+    #                 new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
+    #             labels = torch.LongTensor(new_labels)
 
-            loss_function = simple_loss(outputs, labels)
-            loss_function.backward()
+    #         loss_function = simple_loss(outputs, labels)
+    #         loss_function.backward()
             
-            optimizer.step()
+    #         optimizer.step()
 
-            progress_bar(i, len(train_loader), epoch, t, float(loss_function))
+    #         progress_bar(i, len(train_data_list[dataset.N_TASKS-1]), epoch, t, float(loss_function))
 
-    for t in range(dataset.N_TASKS):
-        need_to_change_list = list(range(t*dataset.N_CLASSES_PER_TASK, t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
-        # stay_list = need_to_change_list.copy()
-        stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
-        logme_simple_model_score.append(get_simple_logme(simple_model, dataset, train_data_list[t], t,
-                                         get_data_sample_from_current_task,
-                                         get_data_label_from_current_task,
-                                         need_to_change_list, stay_list,
-                                         cal_buffer = False))
+    # for t in range(dataset.N_TASKS):
+    #     need_to_change_list = list(range(t*dataset.N_CLASSES_PER_TASK, t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
+    #     # stay_list = need_to_change_list.copy()
+    #     stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+    #     logme_simple_model_score.append(get_simple_logme(simple_model, dataset, train_data_list[t], t,
+    #                                      get_data_sample_from_current_task,
+    #                                      get_data_label_from_current_task,
+    #                                      need_to_change_list, stay_list,
+    #                                      cal_buffer = False))
         
-    del simple_model
-    del simple_loss
+    # del simple_model
+    # del simple_loss
 
-    return results, backward_transfer(results), forget, mean_acc/100, total_complex_1epoch/100, total_complex_25epoch/100, total_complex_50epoch/100, np.mean(leep_score), np.mean(leep_buffer_score), np.mean(logme_score), np.mean(logme_buffer_score), logme_model_score, logme_simple_model_score, np.mean(leep_score)+(100-results[0][0])/100, bwt_leep
+    return results, backward_transfer(results), forget, mean_acc/100,\
+            total_complex_1epoch/100, total_complex_25epoch/100,\
+            total_complex_50epoch/100, np.mean(leep_score), np.mean(leep_buffer_score),\
+            np.mean(logme_score), np.mean(logme_buffer_score),\
+            logme_model_score, logme_simple_model_score_1epoch, logme_simple_model_score_50epoch,\
+            np.mean(leep_score)+(100-results[0][0])/100, bwt_leep
