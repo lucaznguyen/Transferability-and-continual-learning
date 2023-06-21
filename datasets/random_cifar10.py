@@ -102,20 +102,20 @@ class RandomCIFAR10(ContinualDataset):
         # path = "tensor/cifar10/"
         # print("path", path)
 
-        train_dataset = TensorCIFAR10(datasets.random_setting.img_train_tensor,
-                                      datasets.random_setting.target_train_tensor,
-                                      datasets.random_setting.not_aug_img_train_tensor, train = True)
+        # train_dataset = TensorCIFAR10(datasets.random_setting.img_train_tensor,
+        #                               datasets.random_setting.target_train_tensor,
+        #                               datasets.random_setting.not_aug_img_train_tensor, train = True)
 
         if self.args.validation:
             train_dataset, test_dataset = get_train_val(train_dataset,
                                                     test_transform, self.NAME)
         else:
-            test_dataset = TensorCIFAR10(datasets.random_setting.img_test_tensor,
-                                          datasets.random_setting.target_test_tensor,
-                                          datasets.random_setting.not_aug_img_test_tensor, train = False)
+            # test_dataset = TensorCIFAR10(datasets.random_setting.img_test_tensor,
+            #                               datasets.random_setting.target_test_tensor,
+            #                               datasets.random_setting.not_aug_img_test_tensor, train = False)
             # test_dataset = TensorCIFAR10(datasets.random_setting.test_tensor, train = False)
-            # test_dataset = CIFAR10(base_path() + 'CIFAR10',train=False,
-                                #    download=True, transform=test_transform)
+            test_dataset = CIFAR10(base_path() + 'CIFAR10',train=False,
+                                   download=True, transform=test_transform)
 
         train, test = store_masked_loaders_random(train_dataset, test_dataset, 
                                 datasets.random_setting.random_label_list,
