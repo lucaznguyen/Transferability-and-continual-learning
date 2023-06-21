@@ -119,12 +119,13 @@ def main(args=None):
     datasets.random_setting.sequence_label = string_list_to_list(df, "label")
     datasets.random_setting.sequence_sample = string_list_to_list(df, "sample")
     
-    datasets.random_setting.img_train_tensor,\
-    datasets.random_setting.target_train_tensor,\
-    datasets.random_setting.not_aug_img_train_tensor,\
-    datasets.random_setting.img_test_tensor,\
-    datasets.random_setting.target_test_tensor,\
-    datasets.random_setting.not_aug_img_test_tensor = get_tensor(args.dataset)
+    # if args.model not in ["bic", "lucir", "icarl"]:
+    #     datasets.random_setting.img_train_tensor,\
+    #     datasets.random_setting.target_train_tensor,\
+    #     datasets.random_setting.not_aug_img_train_tensor,\
+    #     datasets.random_setting.img_test_tensor,\
+    #     datasets.random_setting.target_test_tensor,\
+    #     datasets.random_setting.not_aug_img_test_tensor = get_tensor(args.dataset)
 
     leep_seq = []
     leep_buffer_seq = []
@@ -226,6 +227,10 @@ def main(args=None):
         backbone = dataset.get_backbone()
         loss = dataset.get_loss()
         model = get_model(args, backbone, loss, dataset.get_transform())
+
+        if args.model == "bic":
+            model.n_tasks = datasets.random_setting.random_N_TASKS
+            model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
 
         if args.model == "xder":
             model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
