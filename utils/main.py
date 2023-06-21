@@ -160,8 +160,9 @@ def main(args=None):
     else:
         scenario = "offline"
 
-    save_dir = "visualize/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+" task/"+"1200 sample/"+args.case+"/"
-
+    # save_dir = "visualize/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+" task/"+"1200 sample/"+args.case+"/"
+    save_dir = "visualize/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+"_task/"+str(args.buffer_size)+"/1200_sample/"+args.case+"/"
+    print(save_dir)
     os.makedirs(os.path.dirname(save_dir), exist_ok=True)
 
     print("THIS IS", datasets.random_setting.SETTING, "SETTING")
