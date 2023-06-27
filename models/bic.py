@@ -9,7 +9,7 @@ from utils.buffer import Buffer, icarl_replay
 from utils.args import *
 from models.utils.continual_model import ContinualModel
 from torch.optim import SGD, Adam
-from datasets import get_dataset
+# from datasets import get_dataset
 import sys
 from tqdm import tqdm
 from copy import deepcopy
@@ -45,9 +45,9 @@ class BiC(ContinualModel):
     def __init__(self, backbone, loss, args, transform):
         super().__init__(backbone, loss, args, transform)
         
-        dd = get_dataset(args)
-        self.n_tasks = dd.N_TASKS
-        self.cpt = dd.N_CLASSES_PER_TASK
+        # dd = get_dataset(args)
+        self.n_tasks = 2
+        self.cpt = 3
         self.transform = transform
         self.buffer = Buffer(self.args.buffer_size, self.device)
         
@@ -88,13 +88,12 @@ class BiC(ContinualModel):
             self.net.eval()
 
             from utils.training import evaluate
-            print("EVAL PRE", evaluate(self, dataset))
+            print("\nEVAL PRE", evaluate(self, dataset))
 
             self.evaluate_bias('pre')
 
             corr_factors = torch.tensor([0., 1.], device=self.device, requires_grad=True)
             self.biasopt = Adam([corr_factors], lr=0.001)
-
 
             for l in (range(self.args.bic_epochs) if self.args.non_verbose else tqdm(range(self.args.bic_epochs))):
                 for data in self.val_loader:
@@ -126,8 +125,8 @@ class BiC(ContinualModel):
         self.task += 1        
         self.build_buffer(dataset)
 
-    def forward(self, x, anticipate=False):
-        ret = super().forward(x)
+    def forward(self, x, big_returnt = "out", anticipate=False):
+        ret = super().forward(x, big_returnt = big_returnt)
         if ret.shape[0] > 0:
             if hasattr(self, 'corr_factors'):
                 start_last_task = (self.task - 1 + (1 if anticipate else 0)) * self.cpt
@@ -171,10 +170,9 @@ class BiC(ContinualModel):
         return loss.item()
 
     def build_buffer(self, dataset):
-
         examples_per_task = self.buffer.buffer_size // self.task
 
-        if self.task > 1:
+        if self.task > self.args.n_task_per_seq - 1:
             # shrink buffer
             buf_x, buf_y, buf_tl = self.buffer.get_all_data()
             self.buffer.empty()

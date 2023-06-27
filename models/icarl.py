@@ -40,8 +40,6 @@ def fill_buffer(self, mem_buffer: Buffer, dataset, t_idx: int) -> None:
             # 1) First, subsample prior classes
             buf_x, buf_y, buf_l = self.buffer.get_all_data()
 
-            print("buf_y", buf_y)
-
             mem_buffer.empty()
             for _y in buf_y.unique():
                 idx = (buf_y == _y)
@@ -62,9 +60,8 @@ def fill_buffer(self, mem_buffer: Buffer, dataset, t_idx: int) -> None:
         # 2.1 Extract all features
         a_x, a_y, a_f, a_l = [], [], [], []
         for x, y, not_norm_x in loader:
-            print("labels YYYYYY", list(set(y)))
-            # mask = (y >= classes_start) & (y < classes_end)
-            # x, y, not_norm_x = x[mask], y[mask], not_norm_x[mask]
+            mask = (y >= classes_start) & (y < classes_end)
+            x, y, not_norm_x = x[mask], y[mask], not_norm_x[mask]
             if not x.size(0):
                 continue
             x, y, not_norm_x = (a.to(self.device) for a in [x, y, not_norm_x])
@@ -90,8 +87,6 @@ def fill_buffer(self, mem_buffer: Buffer, dataset, t_idx: int) -> None:
 
                 idx_min = cost.argmin().item()
 
-                # print("labels", list(set(_y)))
-
                 mem_buffer.add_data(
                     examples=_x[idx_min:idx_min + 1].to(self.device),
                     labels=_y[idx_min:idx_min + 1].to(self.device),
@@ -106,6 +101,7 @@ def fill_buffer(self, mem_buffer: Buffer, dataset, t_idx: int) -> None:
         assert mem_buffer.num_seen_examples <= mem_buffer.buffer_size
 
         self.net.train(mode)
+        
 class ICarl(ContinualModel):
     NAME = 'icarl'
     COMPATIBILITY = ['class-il', 'task-il']
@@ -123,13 +119,13 @@ class ICarl(ContinualModel):
         self.old_net = None
         self.task = 0
 
-    def forward(self, x):
+    def forward(self, x, big_returnt = "out"):
         if self.class_means is None:
             with torch.no_grad():
                 self.compute_class_means()
                 self.class_means = self.class_means.squeeze()
 
-        feats = self.net(x, returnt='features')
+        feats = self.net(x, returnt = "features")
         feats = feats.view(feats.size(0), -1)
         feats = feats.unsqueeze(1)
 
@@ -177,13 +173,10 @@ class ICarl(ContinualModel):
         if task_idx == 0:
             # Compute loss on the current task
             targets = self.eye[labels][:, :ac]
-            print("targets", targets)
             loss = F.binary_cross_entropy_with_logits(outputs, targets)
             assert loss >= 0
         else:
             targets = self.eye[labels][:, pc:ac]
-            print("targets", targets)
-            print("logits", logits[:, :pc])
             comb_targets = torch.cat((logits[:, :pc], targets), dim=1)
             loss = F.binary_cross_entropy_with_logits(outputs, comb_targets)
             assert loss >= 0
@@ -209,17 +202,7 @@ class ICarl(ContinualModel):
         transform = self.dataset.get_normalization_transform()
         class_means = []
         examples, labels, _ = self.buffer.get_all_data(transform)
-        # print("examples", examples)
-        # print("labels", labels)
         for _y in self.classes_so_far:
-            # print("_y", _y)
-            # for i in range(0, len(examples)):
-            #     print("label[i]", labels[i].cpu())
-                # print()
-                # if labels[i].cpu() == _y
-            # print("example", [examples[i]
-            #      for i in range(0, len(examples))
-            #      if labels[i].cpu() == _y])
             x_buf = torch.stack(
                 [examples[i]
                  for i in range(0, len(examples))
@@ -238,3 +221,4 @@ class ICarl(ContinualModel):
                         allt /= 2
                 class_means.append(allt.flatten())
         self.class_means = torch.stack(class_means)
+

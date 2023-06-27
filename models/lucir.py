@@ -35,8 +35,13 @@ def lucir_batch_hard_triplet_loss(labels, embeddings, k, margin, num_old_classes
         max_novel_scores = max_novel_scores[hard_index]
         assert(gt_scores.size() == max_novel_scores.size())
         assert(gt_scores.size(0) == hard_num)
+        # print("gt_scores", gt_scores.view(-1, 1))
+        # print("max_novel_scores", max_novel_scores.view(-1, 1))
+        # print("target", torch.Tensor(np.array([[1] for _ in range(hard_num*k)])).to(embeddings.device))
         loss = nn.MarginRankingLoss(margin=margin)(gt_scores.view(-1, 1),
-                                                   max_novel_scores.view(-1, 1), torch.ones(hard_num*k).to(embeddings.device))
+                                                   max_novel_scores.view(-1, 1), torch.Tensor(np.array([[1] for _ in range(hard_num*k)])).to(embeddings.device))
+        # loss = nn.MarginRankingLoss(margin=margin)(gt_scores.view(-1, 1),
+                                                #    max_novel_scores.view(-1, 1), torch.ones(hard_num*k).to(embeddings.device))
     else:
         loss = torch.zeros(1).to(embeddings.device)
 
@@ -150,9 +155,9 @@ class Lucir(ContinualModel):
         self.net.classifier.task += 1
         self.net.classifier.reset_weight(self.task)
         
-    def forward(self, x):
+    def forward(self, x, big_returnt = "out"):
         with torch.no_grad():
-            outputs = self.net(x)
+            outputs = self.net(x, returnt = big_returnt)
 
         return outputs
 
