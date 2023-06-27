@@ -86,21 +86,21 @@ class RandomMNIST(ContinualDataset):
 
     def get_data_loaders(self):
         transform = transforms.ToTensor()
-        # train_dataset = MyMNIST(base_path() + 'MNIST',
-        #                         train=True, download=True, transform=transform)
-        train_dataset = TensorMNIST(datasets.random_setting.img_train_tensor,
-                                      datasets.random_setting.target_train_tensor,
-                                      datasets.random_setting.not_aug_img_train_tensor, train = True)
+        train_dataset = MyMNIST(base_path() + 'MNIST',
+                                train=True, download=True, transform=transform)
+        # train_dataset = TensorMNIST(datasets.random_setting.img_train_tensor,
+        #                               datasets.random_setting.target_train_tensor,
+        #                               datasets.random_setting.not_aug_img_train_tensor, train = True)
 
         if self.args.validation:
             train_dataset, test_dataset = get_train_val(train_dataset,
                                                         transform, self.NAME)
         else:
-            test_dataset = TensorMNIST(datasets.random_setting.img_test_tensor,
-                                          datasets.random_setting.target_test_tensor,
-                                          datasets.random_setting.not_aug_img_test_tensor, train = False)
-            # test_dataset = MNIST(base_path() + 'MNIST',
-            #                     train=False, download=True, transform=transform)
+            # test_dataset = TensorMNIST(datasets.random_setting.img_test_tensor,
+            #                               datasets.random_setting.target_test_tensor,
+            #                               datasets.random_setting.not_aug_img_test_tensor, train = False)
+            test_dataset = MNIST(base_path() + 'MNIST',
+                                train=False, download=True, transform=transform)
 
         train, test = store_masked_loaders_random(train_dataset, test_dataset, 
                                 datasets.random_setting.random_label_list,
