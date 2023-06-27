@@ -160,9 +160,9 @@ def main(args=None):
     else:
         scenario = "offline"
 
-    # save_dir = "visualize/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+" task/"+"1200 sample/"+args.case+"/"
-    save_dir = "visualize/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+"_task/"+str(args.buffer_size)+"/1200_sample/"+args.case+"/"
-    print(save_dir)
+    save_dir = "visualize/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+" task/"+"1200 sample/"+args.case+"/"
+    # save_dir = "/content/"
+
     os.makedirs(os.path.dirname(save_dir), exist_ok=True)
 
     print("THIS IS", datasets.random_setting.SETTING, "SETTING")
@@ -229,14 +229,17 @@ def main(args=None):
         loss = dataset.get_loss()
         model = get_model(args, backbone, loss, dataset.get_transform())
 
-        if args.model == "bic":
-            model.n_tasks = datasets.random_setting.random_N_TASKS
-            model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
+        # if args.model == "bic":
+        #     model.n_tasks = datasets.random_setting.random_N_TASKS
+        #     model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
 
         if args.model == "xder":
             model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
             model.tasks = datasets.random_setting.random_N_TASKS
-            model.dataset_shape = dataset.get_data_loaders()[0].dataset.data[0].shape[2]
+            # print(dataset.get_data_loaders()[0].dataset.data.shape)
+            # print(dataset.get_data_loaders()[0].dataset.data[0].shape)
+            model.dataset_shape = dataset.get_data_loaders()[0].dataset.data.shape[2]
+            # model.dataset_shape = 28
             model.gpu_augmentation = strong_aug(model.dataset_shape, model.dataset_mean, model.dataset_std)
             dataset = get_dataset(args)
         

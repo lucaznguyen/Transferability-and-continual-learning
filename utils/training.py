@@ -37,7 +37,7 @@ def mask_classes(outputs: torch.Tensor, dataset: ContinualDataset, k: int) -> No
     outputs[:, (k + 1) * dataset.N_CLASSES_PER_TASK:
                 dataset.N_TASKS * dataset.N_CLASSES_PER_TASK] = -20
     
-def evaluate_random(model: ContinualModel, dataset: ContinualDataset, last=False) -> list:
+def evaluate(model: ContinualModel, dataset: ContinualDataset, last=False) -> list:
     """
     Evaluates the accuracy of the model for each past task.
     :param model: the model to be evaluated
@@ -254,7 +254,7 @@ def train(model: ContinualModel, dataset: ContinualDataset,
                 get_data_sample_from_current_task = torch.Tensor(get_data_sample_from_current_task)
                 get_data_label_from_current_task = torch.Tensor(get_data_label_from_current_task)
 
-            accs = evaluate_random(model, dataset, last=True)
+            accs = evaluate(model, dataset, last=True)
             # octe_score.append(get_octe(model, dataset, train_data_list[t-1], train_data_list[t], t))
 
             need_to_change_list = list(range(t*dataset.N_CLASSES_PER_TASK, t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
@@ -304,7 +304,7 @@ def train(model: ContinualModel, dataset: ContinualDataset,
         for epoch in range(model.args.n_epochs):
             for i, data in enumerate(train_loader):
                 inputs, labels, not_aug_inputs = data
-                # labels = labels.type(torch.LongTensor)
+                labels = labels.type(torch.LongTensor)
                 inputs = inputs.to(model.device)
                 labels = labels.to(model.device)
                 not_aug_inputs = not_aug_inputs.to(model.device)
@@ -336,7 +336,7 @@ def train(model: ContinualModel, dataset: ContinualDataset,
             # print("SAVEEEEEEEE")
             # model.net.load_state_dict(torch.load("save/task1taskil.pt"))
 
-        accs = evaluate_random(model, dataset)
+        accs = evaluate(model, dataset)
     
         # torch.save(model.net.state_dict(), "save/task"+str(t+1)+"classil35.pt")
 
