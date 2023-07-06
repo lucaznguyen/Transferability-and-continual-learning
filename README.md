@@ -56,3 +56,9 @@ python utils/main.py --model xder --dataset random-mnist --num_seq 100 --n_class
 ```
 python utils/main.py --model xder --dataset random-mnist --num_seq 100 --n_class_per_task 3 --n_task_per_seq 3 --case 345 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --m 0.7 --alpha 0.2 --beta 1.0 --gamma 0.85 --optim_wd 0 --lambd 0.05 --eta 0.001 --simclr_temp 5 --optim_mom 1e-06 --simclr_batch_size 32 --simclr_num_aug 2 --n_epochs 50
 ```
+
+## LUCIR
++ Run `34_3task`, `35_3task` and `36_3task` case on 3 tasks in MNIST dataset, adjust buffer by `180`, `360`, `900` and `1800`:
+```
+python utils/main.py --model lucir --dataset random-mnist --num_seq 100 --n_class_per_task 3 --n_task_per_seq 3 --case 34_3task --buffer_size 180 --lr 0.01 --lr_finetune 0.01 --optim_mom 0.9 --optim_wd 0 --lamda_base 5 --k_mr 2 --fitting_epochs 20 --mr_margin 0.5 --lamda_mr 1. --n_epochs 50
+```
