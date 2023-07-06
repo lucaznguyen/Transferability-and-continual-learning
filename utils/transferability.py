@@ -370,20 +370,30 @@ def simple_model_logme_score(args: Namespace, epoch: int, dataset: ContinualData
         for i, data in enumerate(train_data_list[dataset.N_TASKS-1]):
 
             inputs, labels, not_aug_inputs = data
+            
+            new_labels = []
+            new_inputs = []
+
+
+            if dataset.SETTING == "task-il":
+                accept_labels = list(range(dataset.N_CLASSES_PER_TASK*t, dataset.N_CLASSES_PER_TASK*(t+1)))
+                for j, ele in enumerate(labels):
+                    if int(ele) in accept_labels:
+                        new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
+                        new_inputs.append(inputs[j].detach().numpy())
+                
+                if len(new_inputs) == 0:
+                    continue
+
+                inputs = torch.Tensor(np.array(new_inputs))
+                labels = torch.LongTensor(new_labels)
+
+            optimizer.zero_grad()
 
             inputs = inputs.to(device)
             labels = labels.to(device)
 
-            optimizer.zero_grad()
-            
             outputs = simple_model(inputs)
-            new_labels = []
-            if dataset.SETTING == "task-il":
-                for ele in labels:
-                    new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
-                labels = torch.LongTensor(new_labels)
-
-            labels = labels.to(device)
 
             loss_function = simple_loss(outputs, labels)
             loss_function.backward()
@@ -621,19 +631,32 @@ def simple_complexity(args: Namespace, dataset: ContinualDataset, train_loader: 
         for i, data in enumerate(train_loader):
 
             inputs, labels, not_aug_inputs = data
+            # inputs = inputs.to(device)
+            # labels = labels.to(device)
+            
+            new_labels = []
+            new_inputs = []
+            if dataset.SETTING == "task-il":
+                accept_labels = list(range(dataset.N_CLASSES_PER_TASK*t, dataset.N_CLASSES_PER_TASK*(t+1)))
+                for j, ele in enumerate(labels):
+                    if int(ele) in accept_labels:
+                        new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
+                        new_inputs.append(inputs[j].detach().numpy())
+                
+                if len(new_inputs) == 0:
+                    continue
+
+                inputs = torch.Tensor(np.array(new_inputs))
+                labels = torch.LongTensor(new_labels)
+
+            optimizer.zero_grad()
+
             inputs = inputs.to(device)
             labels = labels.to(device)
 
-            optimizer.zero_grad()
-            
             outputs = simple_model(inputs)
-            new_labels = []
-            if dataset.SETTING == "task-il":
-                for ele in labels:
-                    new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
-                labels = torch.LongTensor(new_labels)
 
-            labels = labels.to(device)
+            # labels = labels.to(device)
 
             loss_function = simple_loss(outputs, labels)
             loss_function.backward()

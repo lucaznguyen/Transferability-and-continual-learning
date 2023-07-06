@@ -18,8 +18,10 @@ def add_experiment_args(parser: ArgumentParser) -> None:
                         help='Which dataset to perform experiments on.')
     parser.add_argument('--model', type=str, required=True,
                         help='Model name.', choices=get_all_models())
-    parser.add_argument('--num_seq', type=int, required=True,
-                        help='Number of sequence')
+    parser.add_argument('--num_seq', type=int, default = 100, required=True,
+                        help='Number of sequence.')
+    parser.add_argument('--range', type=str, default = '-1',
+                        help='Range of the sequence.')
     parser.add_argument('--case', type=str, required=True,
                         help='Which case to perform experiments on.')
     parser.add_argument('--n_class_per_task', type=int, required=True,
@@ -27,9 +29,11 @@ def add_experiment_args(parser: ArgumentParser) -> None:
     parser.add_argument('--n_task_per_seq', type=int, required=True,
                         help='numer of task per sequence.')
     parser.add_argument('--offline_complexity', type=int, default = 1,
-                        help='Calculate complexity 50 epoch')
+                        help='Calculate complexity 50 epoch.')
     parser.add_argument('--offline_logme', type=int, default = 1,
-                        help='Calculate logme simple model 50 epoch')
+                        help='Calculate logme simple model 50 epoch.')
+    parser.add_argument('--drive', type=int, default = 0,
+                        help='Save on drive.')
 
     parser.add_argument('--lr', type=float, required=True,
                         help='Learning rate.')

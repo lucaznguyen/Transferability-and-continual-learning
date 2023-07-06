@@ -161,19 +161,43 @@ def main(args=None):
         scenario = "offline"
 
     save_dir = "visualize/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+" task/"+"1200 sample/"+args.case+"/"
-    # save_dir = "/content/"
+    
+    if args.drive:
+        save_dir = "/content/drive/MyDrive/GitHub/understand-cf/" + save_dir
 
     os.makedirs(os.path.dirname(save_dir), exist_ok=True)
 
     print("THIS IS", datasets.random_setting.SETTING, "SETTING")
-    for s in range(args.num_seq):
-        print("SEQUENCE:", s)
 
+    if args.range == '-1':
+        lower = 0
+        upper = args.num_seq
+    else:
+        sequence_range = ast.literal_eval(args.range)
+        lower, upper = sequence_range[0], sequence_range[1]
+
+    flag = 1
+
+    if args.range == '-1':
+        name = datasets.random_setting.SETTING+"-"+\
+                str(args.n_epochs)+"epoch-"+\
+                str(datasets.random_setting.random_N_TASKS)+"task-"+\
+                str(int((args.buffer_size/3)*100/1200))+"pbuffer" +\
+                ".csv"
+    else:
+        name = datasets.random_setting.SETTING+"-"+\
+                str(args.n_epochs)+"epoch-"+\
+                str(datasets.random_setting.random_N_TASKS)+"task-"+\
+                str(int((args.buffer_size/3)*100/1200))+"pbuffer"+\
+                str(lower)+str(upper)+\
+                ".csv"
+
+    for s in range(lower, upper):
+        print("SEQUENCE:", s)
 
         datasets.random_setting.random_label_list = []
         datasets.random_setting.random_N_SAMPLES_PER_CLASS = []
 
-        
         datasets.random_setting.unique_label_list = []
         datasets.random_setting.count_unique_label_list = []
         datasets.random_setting.sequence_sample_list = []
@@ -247,12 +271,19 @@ def main(args=None):
         setproctitle.setproctitle('{}_{}_{}'.format(args.model, args.buffer_size if 'buffer_size' in args else 0, args.dataset))     
 
         if isinstance(dataset, ContinualDataset):
-            full_accs, bwt, total_forget, acc,\
-            complex_1epoch, complex_25epoch, complex_50epoch,\
-            leep, leep_buffer,\
-            logme, logme_buffer, logme_model,\
-            logme_simple_model_1epoch, logme_simple_model_50epoch,\
-            leep_1stacc, bwt_leep = train(model, dataset, args)
+            while 1:
+                try:
+                    full_accs, bwt, total_forget, acc,\
+                    complex_1epoch, complex_25epoch, complex_50epoch,\
+                    leep, leep_buffer,\
+                    logme, logme_buffer, logme_model,\
+                    logme_simple_model_1epoch, logme_simple_model_50epoch,\
+                    leep_1stacc, bwt_leep = train(model, dataset, args)
+                    break
+                except Exception as err:
+                    print("Error:", err)
+                    print("=> Run again")
+                    continue
 
             full_accs_seq.append(full_accs)
             acc_seq.append(acc)
@@ -311,11 +342,29 @@ def main(args=None):
                    "sequence_label", "sequence_sample", "sequence_unique"]
             
             df = pd.DataFrame(data=full, columns=col)
-            df.to_csv(save_dir+datasets.random_setting.SETTING+"-"+
-                        str(args.n_epochs)+"epoch-"+
-                        str(datasets.random_setting.random_N_TASKS)+"task-"+
-                        str(int((args.buffer_size/3)*100/1200))+"pbuffer.csv",
-                        index=False)
+
+            try:
+                df.to_csv(save_dir + name, index=False)
+            except:
+                if flag:
+                    state = s
+                    flag = 0
+                print("Failed to save drive at sequence", state)
+                df.to_csv("/content/" + name, index=False)
+            # if args.range == '-1':
+            #     df.to_csv(save_dir+datasets.random_setting.SETTING+"-"+
+            #                 str(args.n_epochs)+"epoch-"+
+            #                 str(datasets.random_setting.random_N_TASKS)+"task-"+
+            #                 str(int((args.buffer_size/3)*100/1200))+"pbuffer.csv",
+            #                 index=False)
+            # else:
+            #     df.to_csv(save_dir+datasets.random_setting.SETTING+"-"+
+            #                 str(args.n_epochs)+"epoch-"+
+            #                 str(datasets.random_setting.random_N_TASKS)+"task-"+
+            #                 str(int((args.buffer_size/3)*100/1200))+"pbuffer"+
+            #                 str(lower)+str(upper)+
+            #                 ".csv",
+            #                 index=False)
 
         else:
             assert not hasattr(model, 'end_task') or model.NAME == 'joint_gcl'

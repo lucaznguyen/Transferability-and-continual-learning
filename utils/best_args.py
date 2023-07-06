@@ -8,7 +8,7 @@ best_args = {
     'sgd': {-1: {'lr': 0.2, 'batch_size': 128, 'n_epochs': 1}},
     'ewc_on': {-1: {'lr': 0.1,
                     'e_lambda': 0.7,
-                    'gamma': 1.0,
+                    'gamma': 1.0,z
                     'batch_size': 128,
                     'n_epochs': 1}},
     'si': {-1: {'lr': 0.1,
