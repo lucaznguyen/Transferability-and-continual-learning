@@ -228,151 +228,152 @@ def main(args=None):
         args.conf_timestamp = str(datetime.datetime.now())
         args.conf_host = socket.gethostname()
 
-        from datasets import get_dataset
+        while 1:
+            try:
 
-        DATASET_NAMES[args.dataset].N_TASKS = datasets.random_setting.random_N_TASKS
-        DATASET_NAMES[args.dataset].SETTING = datasets.random_setting.SETTING
-        DATASET_NAMES[args.dataset].N_CLASSES_PER_TASK = datasets.random_setting.random_N_CLASSES_PER_TASK
-        
-        dataset = get_dataset(args)
-        print("NUM TASK:", dataset.N_TASKS)
-        # dataset.N_TASKS = datasets.random_setting.random_N_TASKS
-        # dataset.SETTING = datasets.random_setting.SETTING
-        # dataset.N_CLASSES_PER_TASK = datasets.random_setting.random_N_CLASSES_PER_TASK
+                from datasets import get_dataset
 
-        from models import get_model
+                DATASET_NAMES[args.dataset].N_TASKS = datasets.random_setting.random_N_TASKS
+                DATASET_NAMES[args.dataset].SETTING = datasets.random_setting.SETTING
+                DATASET_NAMES[args.dataset].N_CLASSES_PER_TASK = datasets.random_setting.random_N_CLASSES_PER_TASK
+                
+                dataset = get_dataset(args)
+                print("NUM TASK:", dataset.N_TASKS)
+                # dataset.N_TASKS = datasets.random_setting.random_N_TASKS
+                # dataset.SETTING = datasets.random_setting.SETTING
+                # dataset.N_CLASSES_PER_TASK = datasets.random_setting.random_N_CLASSES_PER_TASK
 
-        if args.n_epochs is None and isinstance(dataset, ContinualDataset):
-            args.n_epochs = dataset.get_epochs()
-        if args.batch_size is None:
-            args.batch_size = dataset.get_batch_size()
-        if hasattr(importlib.import_module('models.' + args.model), 'Buffer') and args.minibatch_size is None:
-            args.minibatch_size = dataset.get_minibatch_size()
+                from models import get_model
 
-        backbone = dataset.get_backbone()
-        loss = dataset.get_loss()
-        model = get_model(args, backbone, loss, dataset.get_transform())
+                if args.n_epochs is None and isinstance(dataset, ContinualDataset):
+                    args.n_epochs = dataset.get_epochs()
+                if args.batch_size is None:
+                    args.batch_size = dataset.get_batch_size()
+                if hasattr(importlib.import_module('models.' + args.model), 'Buffer') and args.minibatch_size is None:
+                    args.minibatch_size = dataset.get_minibatch_size()
 
-        # if args.model == "bic":
-        #     model.n_tasks = datasets.random_setting.random_N_TASKS
-        #     model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
+                backbone = dataset.get_backbone()
+                loss = dataset.get_loss()
+                model = get_model(args, backbone, loss, dataset.get_transform())
 
-        if args.model == "xder":
-            model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
-            model.tasks = datasets.random_setting.random_N_TASKS
-            # print(dataset.get_data_loaders()[0].dataset.data.shape)
-            # print(dataset.get_data_loaders()[0].dataset.data[0].shape)
-            model.dataset_shape = dataset.get_data_loaders()[0].dataset.data.shape[2]
-            # model.dataset_shape = 28
-            model.gpu_augmentation = strong_aug(model.dataset_shape, model.dataset_mean, model.dataset_std)
-            dataset = get_dataset(args)
-        
-        # set job name
-        setproctitle.setproctitle('{}_{}_{}'.format(args.model, args.buffer_size if 'buffer_size' in args else 0, args.dataset))     
+                # if args.model == "bic":
+                #     model.n_tasks = datasets.random_setting.random_N_TASKS
+                #     model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
 
-        if isinstance(dataset, ContinualDataset):
-            while 1:
-                try:
+                if args.model == "xder":
+                    model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
+                    model.tasks = datasets.random_setting.random_N_TASKS
+
+                    denorm = dataset.get_denormalization_transform()
+                    model.dataset_mean, model.dataset_std = denorm.mean, denorm.std
+
+                    model.dataset_shape = dataset.get_data_loaders()[0].dataset.data.shape[2]
+                    model.gpu_augmentation = strong_aug(model.dataset_shape, model.dataset_mean, model.dataset_std)
+
+                    dataset = get_dataset(args)
+                
+                # set job name
+                setproctitle.setproctitle('{}_{}_{}'.format(args.model, args.buffer_size if 'buffer_size' in args else 0, args.dataset))     
+
+                if isinstance(dataset, ContinualDataset):
                     full_accs, bwt, total_forget, acc,\
                     complex_1epoch, complex_25epoch, complex_50epoch,\
                     leep, leep_buffer,\
                     logme, logme_buffer, logme_model,\
                     logme_simple_model_1epoch, logme_simple_model_50epoch,\
                     leep_1stacc, bwt_leep = train(model, dataset, args)
-                    break
-                except Exception as err:
-                    print("Error:", err)
-                    print("=> Run again")
-                    continue
 
-            full_accs_seq.append(full_accs)
-            acc_seq.append(acc)
-            bwt_seq.append(bwt)
-            forget_seq.append(total_forget)
-            complex_1epoch_seq.append(complex_1epoch)
-            complex_25epoch_seq.append(complex_25epoch)
-            complex_50epoch_seq.append(complex_50epoch)
-            leep_seq.append(leep)
-            leep_buffer_seq.append(leep_buffer)
-            logme_seq.append(logme)
-            logme_buffer_seq.append(logme_buffer)
-            logme_model_seq.append(logme_model)
-            logme_simple_model_1epoch_seq.append(logme_simple_model_1epoch)
-            logme_simple_model_50epoch_seq.append(logme_simple_model_50epoch)
-            leep_1stacc_seq.append(leep_1stacc)
-            bwt_leep_seq.append(bwt_leep)
-            sequence_label_seq.append(datasets.random_setting.random_label_list)
-            sequence_sample_seq.append(datasets.random_setting.random_N_SAMPLES_PER_CLASS)
-            sequence_unique_seq.append(datasets.random_setting.count_unique_label_list)
-            
-            print("bwt = ", bwt_seq)
-            print("forget = ", forget_seq)
-            print("full_accs = ", full_accs_seq)
-            print("acc = ", acc_seq)
-            print("complex_1epoch = ", complex_1epoch_seq)
-            print("complex_25epoch = ", complex_25epoch_seq)
-            print("complex_50epoch = ", complex_50epoch_seq)
-            print("leep = ", leep_seq)
-            print("leep_buffer = ", leep_buffer_seq)
-            print("logme = ", logme_seq)
-            print("logme_buffer = ", logme_buffer_seq)
-            print("logme_model = ", logme_model_seq)
-            print("logme_simple_model_1epoch = ", logme_simple_model_1epoch_seq)
-            print("logme_simple_model_50epoch = ", logme_simple_model_50epoch_seq)
-            print("leep_1stacc = ", leep_1stacc_seq)
-            print("bwt_leep = ", bwt_leep_seq)
-            print("sequence_label = ", sequence_label_seq)
-            print("sequence_sample =", sequence_sample_seq)
-            print("sequence_unique =", sequence_unique_seq)
+                    full_accs_seq.append(full_accs)
+                    acc_seq.append(acc)
+                    bwt_seq.append(bwt)
+                    forget_seq.append(total_forget)
+                    complex_1epoch_seq.append(complex_1epoch)
+                    complex_25epoch_seq.append(complex_25epoch)
+                    complex_50epoch_seq.append(complex_50epoch)
+                    leep_seq.append(leep)
+                    leep_buffer_seq.append(leep_buffer)
+                    logme_seq.append(logme)
+                    logme_buffer_seq.append(logme_buffer)
+                    logme_model_seq.append(logme_model)
+                    logme_simple_model_1epoch_seq.append(logme_simple_model_1epoch)
+                    logme_simple_model_50epoch_seq.append(logme_simple_model_50epoch)
+                    leep_1stacc_seq.append(leep_1stacc)
+                    bwt_leep_seq.append(bwt_leep)
+                    sequence_label_seq.append(datasets.random_setting.random_label_list)
+                    sequence_sample_seq.append(datasets.random_setting.random_N_SAMPLES_PER_CLASS)
+                    sequence_unique_seq.append(datasets.random_setting.count_unique_label_list)
+                    
+                    print("bwt = ", bwt_seq)
+                    print("forget = ", forget_seq)
+                    print("full_accs = ", full_accs_seq)
+                    print("acc = ", acc_seq)
+                    print("complex_1epoch = ", complex_1epoch_seq)
+                    print("complex_25epoch = ", complex_25epoch_seq)
+                    print("complex_50epoch = ", complex_50epoch_seq)
+                    print("leep = ", leep_seq)
+                    print("leep_buffer = ", leep_buffer_seq)
+                    print("logme = ", logme_seq)
+                    print("logme_buffer = ", logme_buffer_seq)
+                    print("logme_model = ", logme_model_seq)
+                    print("logme_simple_model_1epoch = ", logme_simple_model_1epoch_seq)
+                    print("logme_simple_model_50epoch = ", logme_simple_model_50epoch_seq)
+                    print("leep_1stacc = ", leep_1stacc_seq)
+                    print("bwt_leep = ", bwt_leep_seq)
+                    print("sequence_label = ", sequence_label_seq)
+                    print("sequence_sample =", sequence_sample_seq)
+                    print("sequence_unique =", sequence_unique_seq)
 
-            full = [[bwt_seq[i], forget_seq[i], full_accs_seq[i],
-                          acc_seq[i], complex_1epoch_seq[i], complex_25epoch_seq[i], complex_50epoch_seq[i],
-                          leep_seq[i], leep_buffer_seq[i],
-                          logme_seq[i], logme_buffer_seq[i],
-                          logme_model_seq[i], logme_simple_model_1epoch_seq[i], logme_simple_model_50epoch_seq[i],
-                          leep_1stacc_seq[i], bwt_leep_seq[i],
-                          sequence_label_seq[i], sequence_sample_seq[i], sequence_unique_seq[i]]
-                          for i in range(s+1)]
-            col = ["bwt", "forget", "full_accs",
-                   "acc", "complex_1epoch", "complex_25epoch", "complex_50epoch",
-                   "leep", "leep_buffer",
-                   "logme", "logme_buffer",
-                   "logme_model", "logme_simple_model_1epoch", "logme_simple_model_50epoch",
-                   "leep_1stacc", "bwt_leep",
-                   "sequence_label", "sequence_sample", "sequence_unique"]
-            
-            df = pd.DataFrame(data=full, columns=col)
+                    full = [[bwt_seq[i], forget_seq[i], full_accs_seq[i],
+                                acc_seq[i], complex_1epoch_seq[i], complex_25epoch_seq[i], complex_50epoch_seq[i],
+                                leep_seq[i], leep_buffer_seq[i],
+                                logme_seq[i], logme_buffer_seq[i],
+                                logme_model_seq[i], logme_simple_model_1epoch_seq[i], logme_simple_model_50epoch_seq[i],
+                                leep_1stacc_seq[i], bwt_leep_seq[i],
+                                sequence_label_seq[i], sequence_sample_seq[i], sequence_unique_seq[i]]
+                                for i in range(s+1)]
+                    col = ["bwt", "forget", "full_accs",
+                        "acc", "complex_1epoch", "complex_25epoch", "complex_50epoch",
+                        "leep", "leep_buffer",
+                        "logme", "logme_buffer",
+                        "logme_model", "logme_simple_model_1epoch", "logme_simple_model_50epoch",
+                        "leep_1stacc", "bwt_leep",
+                        "sequence_label", "sequence_sample", "sequence_unique"]
+                    
+                    df = pd.DataFrame(data=full, columns=col)
+                    if args.num_seq <= 100:
+                        try:
+                            df.to_csv(save_dir + name, index=False)
+                        except:
+                            if flag:
+                                state = s
+                                flag = 0
+                            print("Failed to save drive at sequence", state)
+                            df.to_csv("/content/" + name, index=False)
+                    else:
+                        if s%50 == 0:
+                            try:
+                                df.to_csv(save_dir + name, index=False)
+                            except:
+                                if flag:
+                                    state = s
+                                    flag = 0
+                                print("Failed to save drive at sequence", state)
+                                df.to_csv("/content/" + name, index=False)
 
-            try:
-                df.to_csv(save_dir + name, index=False)
-            except:
-                if flag:
-                    state = s
-                    flag = 0
-                print("Failed to save drive at sequence", state)
-                df.to_csv("/content/" + name, index=False)
-            # if args.range == '-1':
-            #     df.to_csv(save_dir+datasets.random_setting.SETTING+"-"+
-            #                 str(args.n_epochs)+"epoch-"+
-            #                 str(datasets.random_setting.random_N_TASKS)+"task-"+
-            #                 str(int((args.buffer_size/3)*100/1200))+"pbuffer.csv",
-            #                 index=False)
-            # else:
-            #     df.to_csv(save_dir+datasets.random_setting.SETTING+"-"+
-            #                 str(args.n_epochs)+"epoch-"+
-            #                 str(datasets.random_setting.random_N_TASKS)+"task-"+
-            #                 str(int((args.buffer_size/3)*100/1200))+"pbuffer"+
-            #                 str(lower)+str(upper)+
-            #                 ".csv",
-            #                 index=False)
+                else:
+                    assert not hasattr(model, 'end_task') or model.NAME == 'joint_gcl'
+                    ctrain(args)
 
-        else:
-            assert not hasattr(model, 'end_task') or model.NAME == 'joint_gcl'
-            ctrain(args)
+                del backbone
+                del loss
+                del model
+                
+                break
 
-        del backbone
-        del loss
-        del model
+            except Exception as err:
+                print("Error:", err)
+                print("=> Run again")
+                continue
 
 
 
