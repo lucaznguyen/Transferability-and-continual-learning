@@ -18,7 +18,7 @@ def add_experiment_args(parser: ArgumentParser) -> None:
                         help='Which dataset to perform experiments on.')
     parser.add_argument('--model', type=str, required=True,
                         help='Model name.', choices=get_all_models())
-    parser.add_argument('--num_seq', type=int, default = 100, required=True,
+    parser.add_argument('--num_seq', type=int, default = -1,
                         help='Number of sequence.')
     parser.add_argument('--range', type=str, default = '-1',
                         help='Range of the sequence.')

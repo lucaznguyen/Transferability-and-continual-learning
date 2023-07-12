@@ -172,9 +172,12 @@ def main(args=None):
     if args.range == '-1':
         lower = 0
         upper = args.num_seq
+        if args.num_seq == -1:
+            upper = len(sequence_label)
     else:
         sequence_range = ast.literal_eval(args.range)
         lower, upper = sequence_range[0], sequence_range[1]
+
 
     flag = 1
 
