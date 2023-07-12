@@ -69,7 +69,7 @@ python utils/main.py --model lucir --dataset random-cifar10 --num_seq 100 --n_cl
 python utils/main.py --model lucir --dataset random-mnist --num_seq 300 --n_class_per_task 3 --n_task_per_seq 3 --case 34_3task --buffer_size 180 --lr 0.01 --lr_finetune 0.01 --optim_mom 0.9 --optim_wd 0 --lamda_base 5 --k_mr 2 --fitting_epochs 20 --mr_margin 0.5 --lamda_mr 1. --n_epochs 50
 ```
 
-#BIC
+## BIC
 + Run the experiments on 5 task in CIFAR-10 dataset, adjust buffer by `180`, `360`, `900` and `1800`:
 ```
 python utils/main.py --model bic --dataset random-cifar10 --num_seq 100 --n_class_per_task 3 --n_task_per_seq 5 --case cifar10_357911 --buffer_size 1800 --lr 0.03 --minibatch_size 128 --batch_size 32 --optim_mom 0 --optim_wd 0 --n_epochs 50
