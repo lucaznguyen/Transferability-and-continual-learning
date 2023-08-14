@@ -4,13 +4,16 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy # needed (don't change it)
+import os
 import pandas as pd
 import ast
 import importlib
-import os
 import inspect
 import sys
 import socket
+
+import traceback
+
 mammoth_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(mammoth_path)
 sys.path.append(mammoth_path + '/datasets')
@@ -30,6 +33,8 @@ from utils.training import train
 from utils.best_args import best_args
 from utils.augmentations import *
 from utils.conf import set_random_seed
+
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 import setproctitle
 import torch
@@ -115,9 +120,12 @@ def main(args=None):
     datasets.random_setting.random_N_CLASSES_PER_TASK = args.n_class_per_task
 
     df = pd.read_csv(benchmark_dir)
-    
-    datasets.random_setting.sequence_label = string_list_to_list(df, "label")
-    datasets.random_setting.sequence_sample = string_list_to_list(df, "sample")
+
+    sequence_label = string_list_to_list(df, "label")
+    sequence_sample = [[[args.n_sample]*len(sequence_label[0][0])]*len(sequence_label[0])]*len(sequence_label)
+
+    datasets.random_setting.sequence_label = sequence_label.copy()
+    datasets.random_setting.sequence_sample = sequence_sample.copy()
     
     # if args.model not in ["bic", "lucir", "icarl"]:
     #     datasets.random_setting.img_train_tensor,\
@@ -152,15 +160,13 @@ def main(args=None):
     # sequence_label = [[[8, 7, 3], [2, 5, 6]], [[1, 3, 6], [2, 5, 4]], [[5, 4, 0], [3, 7, 1]], [[7, 1, 6], [0, 5, 3]], [[0, 6, 2], [4, 1, 7]], [[1, 7, 8], [0, 4, 2]], [[6, 7, 3], [0, 5, 8]], [[4, 8, 3], [0, 5, 2]], [[4, 5, 3], [2, 7, 1]], [[7, 0, 2], [6, 8, 5]], [[6, 4, 8], [5, 1, 7]], [[7, 1, 6], [5, 2, 8]], [[5, 7, 3], [1, 6, 2]], [[6, 7, 5], [0, 1, 8]], [[5, 1, 0], [6, 2, 4]], [[3, 1, 6], [8, 2, 5]], [[4, 7, 3], [2, 5, 6]], [[1, 3, 2], [4, 7, 8]], [[4, 2, 1], [3, 0, 6]], [[1, 3, 0], [2, 8, 4]], [[2, 3, 8], [1, 4, 0]], [[7, 5, 3], [0, 1, 4]], [[4, 1, 7], [5, 6, 8]], [[2, 6, 1], [4, 3, 5]], [[3, 6, 8], [2, 5, 7]], [[6, 3, 4], [0, 1, 8]], [[1, 3, 2], [8, 6, 7]], [[8, 2, 1], [6, 0, 5]], [[4, 3, 1], [2, 7, 5]], [[7, 3, 6], [0, 4, 2]], [[5, 8, 2], [4, 6, 1]], [[2, 6, 5], [1, 7, 8]], [[4, 8, 3], [2, 0, 5]], [[7, 4, 2], [0, 6, 1]], [[7, 3, 8], [4, 6, 2]], [[2, 8, 0], [1, 6, 3]], [[4, 2, 1], [5, 8, 7]], [[7, 6, 5], [0, 8, 1]], [[6, 7, 3], [2, 8, 1]], [[7, 1, 5], [3, 0, 6]], [[3, 4, 2], [1, 8, 5]], [[7, 6, 3], [1, 0, 2]], [[6, 4, 2], [1, 3, 5]], [[8, 2, 0], [7, 5, 4]], [[5, 4, 8], [2, 3, 1]], [[3, 1, 7], [0, 2, 4]], [[6, 4, 5], [3, 1, 7]], [[6, 0, 8], [3, 5, 7]], [[7, 3, 8], [4, 6, 5]], [[3, 0, 8], [4, 2, 7]], [[3, 4, 8], [5, 7, 0]], [[5, 6, 7], [8, 1, 3]], [[7, 6, 3], [0, 4, 1]], [[6, 5, 4], [1, 3, 8]], [[3, 2, 4], [0, 8, 7]], [[4, 1, 2], [6, 7, 3]], [[1, 3, 0], [2, 8, 6]], [[4, 1, 2], [0, 5, 3]], [[1, 7, 2], [4, 6, 5]], [[6, 3, 0], [5, 1, 7]], [[2, 5, 8], [3, 0, 1]], [[7, 5, 6], [4, 8, 1]], [[8, 6, 2], [1, 4, 7]], [[5, 1, 0], [2, 8, 4]], [[4, 0, 1], [8, 7, 2]], [[2, 3, 6], [4, 5, 0]], [[4, 7, 1], [2, 8, 5]], [[6, 4, 2], [3, 7, 0]], [[4, 5, 1], [8, 6, 3]], [[3, 8, 4], [7, 1, 6]], [[1, 7, 5], [3, 6, 2]], [[3, 4, 8], [2, 0, 6]], [[7, 0, 5], [1, 2, 4]], [[2, 7, 1], [0, 6, 4]], [[1, 2, 4], [0, 8, 5]], [[5, 1, 6], [2, 8, 4]], [[1, 0, 3], [6, 2, 4]], [[1, 7, 5], [6, 4, 0]], [[5, 1, 8], [6, 0, 4]], [[2, 5, 8], [3, 1, 0]], [[7, 1, 0], [4, 2, 5]], [[2, 4, 3], [5, 0, 8]], [[6, 2, 0], [1, 3, 8]], [[2, 3, 7], [4, 6, 5]], [[0, 1, 2], [4, 8, 3]], [[3, 4, 2], [1, 6, 8]], [[2, 0, 4], [1, 5, 3]], [[7, 5, 3], [1, 6, 0]], [[1, 4, 5], [6, 0, 2]], [[3, 4, 6], [1, 0, 5]], [[0, 7, 1], [5, 8, 4]], [[2, 7, 8], [4, 1, 5]], [[5, 6, 3], [4, 7, 0]], [[4, 7, 5], [2, 0, 8]], [[0, 6, 7], [3, 1, 2]], [[0, 7, 3], [4, 5, 6]], [[0, 4, 2], [1, 5, 7]], [[6, 7, 1], [4, 5, 8]], [[1, 4, 3], [7, 8, 0]], [[1, 0, 6], [7, 4, 2]]]
     # sequence_sample = [[[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]], [[1200, 1200, 1200], [1200, 1200, 1200]]]
     ###
-    sequence_label = datasets.random_setting.sequence_label
-    sequence_sample = datasets.random_setting.sequence_sample
 
     if args.n_epochs == 1:
         scenario = "online"
     else:
         scenario = "offline"
 
-    save_dir = "visualize/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+" task/"+"1200 sample/"+args.case+"/"
+    save_dir = "visualize/"+args.dataset+"/"+args.model+"/"+scenario+"/"+str(args.n_task_per_seq)+" task/"+str(args.n_sample) +" sample/"+args.case+"/"
     
     if args.drive:
         save_dir = "/content/drive/MyDrive/GitHub/understand-cf/" + save_dir
@@ -194,8 +200,34 @@ def main(args=None):
                 str(int((args.buffer_size/3)*100/1200))+"pbuffer"+\
                 str(lower)+str(upper)+\
                 ".csv"
+    
+    sequence_range = range(lower, upper)
+        
+    if args.resume == 1:
+        try:
+            flag_resume = 0
+            resume_range = []
+            resume_df = pd.read_csv(save_dir + name)
+            resume_label_list = list(resume_df["sequence_label"])
+            full_label = list(df["label"])
+            for i, label in enumerate(full_label):
+                if label not in resume_label_list:
+                    resume_range.append(i)
+                    flag_resume = 1
+            if flag_resume == 1:
+                sequence_range = resume_range
+                name = datasets.random_setting.SETTING+"-"+\
+                str(args.n_epochs)+"epoch-"+\
+                str(datasets.random_setting.random_N_TASKS)+"task-"+\
+                str(int((args.buffer_size/3)*100/1200))+"pbuffer-" +\
+                "RESUME.csv"
+                print("-- RESUME TRAINING WITH REMAINING SEQUENCE LIST'S LENGTH:", len(sequence_range))
 
-    for s in range(lower, upper):
+        except Exception as err:
+            print("Resume error due to:", err)
+            pass
+
+    for index, s in enumerate(sequence_range):
         print("SEQUENCE:", s)
 
         datasets.random_setting.random_label_list = []
@@ -259,9 +291,14 @@ def main(args=None):
                 loss = dataset.get_loss()
                 model = get_model(args, backbone, loss, dataset.get_transform())
 
-                # if args.model == "bic":
-                #     model.n_tasks = datasets.random_setting.random_N_TASKS
-                #     model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
+                if args.model == "bic":
+                    model.n_tasks = datasets.random_setting.random_N_TASKS
+                    model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
+
+                if args.model == "icarl":
+                    model.dataset = get_dataset(args)
+                    model.eye = torch.eye(datasets.random_setting.random_N_CLASSES_PER_TASK *
+                             datasets.random_setting.random_N_TASKS).to(model.device)
 
                 if args.model == "xder":
                     model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
@@ -333,7 +370,7 @@ def main(args=None):
                                 logme_model_seq[i], logme_simple_model_1epoch_seq[i], logme_simple_model_50epoch_seq[i],
                                 leep_1stacc_seq[i], bwt_leep_seq[i],
                                 sequence_label_seq[i], sequence_sample_seq[i], sequence_unique_seq[i]]
-                                for i in range(s+1)]
+                                for i in range(index+1)]
                     col = ["bwt", "forget", "full_accs",
                         "acc", "complex_1epoch", "complex_25epoch", "complex_50epoch",
                         "leep", "leep_buffer",
@@ -348,17 +385,17 @@ def main(args=None):
                             df.to_csv(save_dir + name, index=False)
                         except:
                             if flag:
-                                state = s
+                                state = index
                                 flag = 0
                             print("Failed to save drive at sequence", state)
                             df.to_csv("/content/" + name, index=False)
                     else:
-                        if s%50 == 0:
+                        if (index + 1) % 50 == 0:
                             try:
                                 df.to_csv(save_dir + name, index=False)
                             except:
                                 if flag:
-                                    state = s
+                                    state = index
                                     flag = 0
                                 print("Failed to save drive at sequence", state)
                                 df.to_csv("/content/" + name, index=False)
@@ -374,7 +411,8 @@ def main(args=None):
                 break
 
             except Exception as err:
-                print("Error:", err)
+                print(''.join(traceback.format_exception(etype=type(err), value=err, tb=err.__traceback__)))
+                # print("Error:", err)
                 print("=> Run again")
                 continue
 

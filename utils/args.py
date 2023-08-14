@@ -24,6 +24,10 @@ def add_experiment_args(parser: ArgumentParser) -> None:
                         help='Range of the sequence.')
     parser.add_argument('--case', type=str, required=True,
                         help='Which case to perform experiments on.')
+    parser.add_argument('--resume', type=int, default = 0,
+                        help='Resume training with remaining sequences.')
+    parser.add_argument('--n_sample', type=int, default = 1200,
+                        help='Number of sample per class.')
     parser.add_argument('--n_class_per_task', type=int, required=True,
                         help='number of class per task.')
     parser.add_argument('--n_task_per_seq', type=int, required=True,

@@ -349,7 +349,8 @@ def simple_model_logme_score(args: Namespace, epoch: int, dataset: ContinualData
     
     simple_loss = torch.nn.CrossEntropyLoss()
 
-    if args.dataset == "random-mnist":
+    if "mnist" in args.dataset:
+    # if args.dataset == "random-mnist" or args.dataset == "random-fashion-mnist":
         if dataset.SETTING == "task-il":
             simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
         if dataset.SETTING == "class-il":
@@ -608,12 +609,13 @@ def simple_complexity(args: Namespace, dataset: ContinualDataset, train_loader: 
     
     simple_loss = torch.nn.CrossEntropyLoss()
 
-    if str(args.dataset) == "random-mnist":
+    # if args.dataset == "random-mnist" or args.dataset == "random-fashion-mnist":
+    if "mnist" in args.dataset:
         if dataset.SETTING == "task-il":
             simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
         if dataset.SETTING == "class-il":
             simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
-    elif str(args.dataset) == "random-cifar10":
+    elif args.dataset == "random-cifar10":
         # print("ok")
         if dataset.SETTING == "task-il":
             simple_model = resnet18(dataset.N_CLASSES_PER_TASK)
@@ -674,7 +676,11 @@ def simple_complexity(args: Namespace, dataset: ContinualDataset, train_loader: 
             correct, total = 0.0, 0.0
             for data in test_loader:
                 with torch.no_grad():
-                    inputs, labels = data
+                    if len(data) == 2:
+                        inputs, labels = data
+                    elif len(data) == 3:
+                        inputs, labels, _ = data
+                    # inputs, labels = data
 
                     inputs = inputs.to(device)
                     labels = labels.to(device)
