@@ -246,6 +246,90 @@ def store_masked_loaders_random(train_dataset: datasets, test_dataset: datasets,
     setting.i += 1
     return train_loader, test_loader
 
+
+def store_masked_loaders_tissue(train_dataset: datasets, test_dataset: datasets, random_label_list: list,
+                    random_N_SAMPLES_PER_CLASS: list, unique_label_list: list,
+                    setting: ContinualDataset) -> Tuple[DataLoader, DataLoader]:
+    """
+    Divides the dataset into tasks.
+    :param train_dataset: train dataset
+    :param test_dataset: test dataset
+    :param setting: continual learning setting
+    :return: train and test loaders
+    """
+
+    train_sample_list = random_N_SAMPLES_PER_CLASS[setting.i].copy()
+    
+    train_mask, test_mask = [], []
+    for target in train_dataset.labels:
+        target = target[0]
+        # print(target)
+        if target in random_label_list[setting.i]:
+            index = random_label_list[setting.i].index(int(target))
+            if train_sample_list[index] > 0:
+                train_mask.append(True)
+                train_sample_list[index] = train_sample_list[index] - 1
+                # print(int(target))
+            else:
+                # print(int(target))
+                train_mask.append(False)
+        else:
+            train_mask.append(False)
+            
+    for target in test_dataset.labels:
+        target = target[0]
+        # print(target)
+        test_mask.append(target in random_label_list[setting.i])
+
+    train_mask = np.array(train_mask)
+    test_mask = np.array(test_mask)
+
+    # print("train_mask", train_mask)
+    # print("test_mask", test_mask)
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    train_dataset.imgs = train_dataset.imgs[train_mask]
+
+    # train_dataset.imgs = train_dataset.imgs.to(device)
+
+    test_dataset.imgs = test_dataset.imgs[test_mask]
+
+    # test_dataset.imgs = test_dataset.imgs.to(device)
+
+    train_dataset.labels = train_dataset.labels[train_mask]
+    test_dataset.labels = test_dataset.labels[test_mask]
+
+    if setting.SETTING == 'class-il':
+        for i in range(len(train_dataset.labels)):
+            index = unique_label_list.index(train_dataset.labels[i][0])
+            train_dataset.labels[i] = index
+        
+        for i in range(len(test_dataset.labels)):
+            index = unique_label_list.index(test_dataset.labels[i][0])
+            test_dataset.labels[i] = index
+            
+    if setting.SETTING == 'task-il':
+        for i in range(len(train_dataset.labels)):
+            index = random_label_list[setting.i].index(train_dataset.labels[i][0])
+            train_dataset.labels[i] = setting.i*setting.N_CLASSES_PER_TASK + index
+        
+        for i in range(len(test_dataset.labels)):
+            index = random_label_list[setting.i].index(test_dataset.labels[i][0])
+            test_dataset.labels[i] = setting.i*setting.N_CLASSES_PER_TASK + index
+
+    train_loader = DataLoader(train_dataset,
+                              batch_size=setting.args.batch_size, shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_dataset,
+                             batch_size=setting.args.batch_size, shuffle=False, num_workers=4)
+    
+    setting.test_loaders.append(test_loader)
+    setting.train_loader = train_loader
+
+    setting.i += 1
+    return train_loader, test_loader
+
+
 def get_previous_train_loader(train_dataset: datasets, batch_size: int,
                               setting: ContinualDataset) -> DataLoader:
     """
