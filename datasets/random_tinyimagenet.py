@@ -3,6 +3,11 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
+from typing import Optional
+
+import torch.nn as nn
+
 import torch
 
 import numpy as np
@@ -12,7 +17,6 @@ from backbone.ResNet18 import resnet18
 import torch.nn.functional as F
 from utils.conf import base_path
 from PIL import Image
-import os
 from datasets.utils.validation import get_train_val
 from datasets.utils.continual_dataset import ContinualDataset, store_masked_loaders_random
 from datasets.transforms.denormalization import DeNormalize
@@ -27,8 +31,9 @@ class TinyImagenet(Dataset):
     """
     Defines Tiny Imagenet as for the others pytorch datasets.
     """
-    def __init__(self, root: str, train: bool=True, transform: transforms=None,
-                target_transform: transforms=None, download: bool=False) -> None:
+
+    def __init__(self, root: str, train: bool = True, transform: Optional[nn.Module] = None,
+                 target_transform: Optional[nn.Module] = None, download: bool = False) -> None:
         self.not_aug_transform = transforms.Compose([transforms.ToTensor()])
         self.root = root
         self.train = train
@@ -40,28 +45,24 @@ class TinyImagenet(Dataset):
             if os.path.isdir(root) and len(os.listdir(root)) > 0:
                 print('Download not needed, files already on disk.')
             else:
-                from google_drive_downloader import GoogleDriveDownloader as gdd
+                from onedrivedownloader import download
 
-                # https://drive.google.com/file/d/1Sy3ScMBr0F4se8VZ6TAwDYF-nNGAAdxj/view
                 print('Downloading dataset')
-                gdd.download_file_from_google_drive(
-                    file_id='1Sy3ScMBr0F4se8VZ6TAwDYF-nNGAAdxj',
-
-                    dest_path=os.path.join(root, 'tiny-imagenet-processed.zip'),
-                    unzip=True)
+                ln = "https://unimore365-my.sharepoint.com/:u:/g/personal/263133_unimore_it/EVKugslStrtNpyLGbgrhjaABqRHcE3PB_r2OEaV7Jy94oQ?e=9K29aD"
+                download(ln, filename=os.path.join(root, 'tiny-imagenet-processed.zip'), unzip=True, unzip_path=root, clean=True)
 
         self.data = []
         for num in range(20):
             self.data.append(np.load(os.path.join(
                 root, 'processed/x_%s_%02d.npy' %
-                      ('train' if self.train else 'val', num+1))))
+                      ('train' if self.train else 'val', num + 1))))
         self.data = np.concatenate(np.array(self.data))
 
         self.targets = []
         for num in range(20):
             self.targets.append(np.load(os.path.join(
                 root, 'processed/y_%s_%02d.npy' %
-                      ('train' if self.train else 'val', num+1))))
+                      ('train' if self.train else 'val', num + 1))))
         self.targets = np.concatenate(np.array(self.targets))
 
     def __len__(self):
