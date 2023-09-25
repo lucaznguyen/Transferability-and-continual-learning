@@ -26,6 +26,8 @@ def add_experiment_args(parser: ArgumentParser) -> None:
                         help='Which case to perform experiments on.')
     parser.add_argument('--resume', type=int, default = 0,
                         help='Resume training with remaining sequences.')
+    parser.add_argument('--train_log', type = int, default = 1,
+                        help='Log the training process and Train')
     parser.add_argument('--n_sample', type=int, default = 1200,
                         help='Number of sample per class.')
     parser.add_argument('--n_class_per_task', type=int, required=True,
