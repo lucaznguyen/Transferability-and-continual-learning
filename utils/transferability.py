@@ -362,7 +362,7 @@ def simple_model_logme_score(args: Namespace, epoch: int, dataset: ContinualData
                 simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
             if dataset.SETTING == "class-il":
                 simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
-        elif args.dataset == "random-cifar10":
+        elif "cifar" in args.dataset or "tinyimg" in args.dataset:
             if dataset.SETTING == "task-il":
                 simple_model = resnet18(dataset.N_CLASSES_PER_TASK)
             if dataset.SETTING == "class-il":
@@ -623,7 +623,7 @@ def simple_complexity(args: Namespace, dataset: ContinualDataset, train_loader: 
             simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
         if dataset.SETTING == "class-il":
             simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
-    elif args.dataset == "random-cifar10":
+    elif "cifar" in args.dataset or "tinyimg" in args.dataset:
         # print("ok")
         if dataset.SETTING == "task-il":
             simple_model = resnet18(dataset.N_CLASSES_PER_TASK)
