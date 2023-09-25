@@ -46,6 +46,8 @@ def each_evidence(y_, f, fh, v, s, vh, N, D):
     lam = alpha / beta
     tmp = (vh @ (f @ np.ascontiguousarray(y_)))
     for _ in range(11):
+        # print("alpha", alpha)
+        # print("beta", beta)
         # should converge after at most 10 steps
         # typically converge after two or three steps
         gamma = (s / (s + lam)).sum()
@@ -71,8 +73,8 @@ def each_evidence(y_, f, fh, v, s, vh, N, D):
 
 # use pseudo data to compile the function
 # D = 20, N = 50
-f_tmp = np.random.randn(20, 50).astype(np.float64)
-each_evidence(np.random.randint(0, 2, 50).astype(np.float64), f_tmp, f_tmp.transpose(), np.eye(20, dtype=np.float64), np.ones(20, dtype=np.float64), np.eye(20, dtype=np.float64), 50, 20)
+# f_tmp = np.random.randn(20, 50).astype(np.float64)
+# each_evidence(np.random.randint(0, 2, 50).astype(np.float64), f_tmp, f_tmp.transpose(), np.eye(20, dtype=np.float64), np.ones(20, dtype=np.float64), np.eye(20, dtype=np.float64), 50, 20)
 
 
 @njit
@@ -157,6 +159,8 @@ class LogME(object):
 
             alpha, beta = 1.0, 1.0
             for k in range(100):
+                # print("alpha", alpha)
+                # print("beta", beta)
                 # print("iter:", k)
                 old_alpha = alpha
                 old_beta = beta
@@ -345,67 +349,71 @@ def get_simple_logme(model: MNISTMLP, dataset: ContinualDataset, train_loader: D
 
 def simple_model_logme_score(args: Namespace, epoch: int, dataset: ContinualDataset, train_data_list: list, t: int,
                 get_data_sample_from_current_task: list, get_data_label_from_current_task: list,
-                need_to_change_list: list, stay_list: list):
+                need_to_change_list: list, stay_list: list,
+                current_task: int,
+                simple_model = None):
     
-    simple_loss = torch.nn.CrossEntropyLoss()
+    if simple_model == None:
+        simple_loss = torch.nn.CrossEntropyLoss()
 
-    if "mnist" in args.dataset:
-    # if args.dataset == "random-mnist" or args.dataset == "random-fashion-mnist":
-        if dataset.SETTING == "task-il":
-            simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
-        if dataset.SETTING == "class-il":
-            simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
-    elif args.dataset == "random-cifar10":
-        if dataset.SETTING == "task-il":
-            simple_model = resnet18(dataset.N_CLASSES_PER_TASK)
-        if dataset.SETTING == "class-il":
-            simple_model = resnet18(datasets.random_setting.count_unique_label_list[t])
-    
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    simple_model = simple_model.to(device)
-
-    optimizer = torch.optim.SGD(simple_model.parameters(), lr= 0.01, weight_decay=0.0001)
-
-    for epoch in range(epoch):
-        count = 0
-        for i, data in enumerate(train_data_list[dataset.N_TASKS-1]):
-
-            inputs, labels, not_aug_inputs = data
-            
-            new_labels = []
-            new_inputs = []
-
-
+        if "mnist" in args.dataset:
+        # if args.dataset == "random-mnist" or args.dataset == "random-fashion-mnist":
             if dataset.SETTING == "task-il":
-                accept_labels = list(range(dataset.N_CLASSES_PER_TASK*t, dataset.N_CLASSES_PER_TASK*(t+1)))
-                for j, ele in enumerate(labels):
-                    if int(ele) in accept_labels:
-                        new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
-                        new_inputs.append(inputs[j].detach().numpy())
+                simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
+            if dataset.SETTING == "class-il":
+                simple_model = MNISTMLP(28 * 28, datasets.random_setting.count_unique_label_list[t])
+        elif args.dataset == "random-cifar10":
+            if dataset.SETTING == "task-il":
+                simple_model = resnet18(dataset.N_CLASSES_PER_TASK)
+            if dataset.SETTING == "class-il":
+                simple_model = resnet18(datasets.random_setting.count_unique_label_list[t])
+        
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        simple_model = simple_model.to(device)
+
+        optimizer = torch.optim.SGD(simple_model.parameters(), lr= 0.01, weight_decay=0.0001)
+
+        for epoch in range(epoch):
+            count = 0
+            for i, data in enumerate(train_data_list[dataset.N_TASKS-1]):
+
+                inputs, labels, not_aug_inputs = data
                 
-                if len(new_inputs) == 0:
-                    continue
+                new_labels = []
+                new_inputs = []
 
-                inputs = torch.Tensor(np.array(new_inputs))
-                labels = torch.LongTensor(new_labels)
 
-            optimizer.zero_grad()
+                if dataset.SETTING == "task-il":
+                    accept_labels = list(range(dataset.N_CLASSES_PER_TASK*t, dataset.N_CLASSES_PER_TASK*(t+1)))
+                    for j, ele in enumerate(labels):
+                        if int(ele) in accept_labels:
+                            new_labels.append(int(ele) - dataset.N_CLASSES_PER_TASK*t)
+                            new_inputs.append(inputs[j].detach().numpy())
+                    
+                    if len(new_inputs) == 0:
+                        continue
 
-            inputs = inputs.to(device)
-            labels = labels.to(device)
+                    inputs = torch.Tensor(np.array(new_inputs))
+                    labels = torch.LongTensor(new_labels)
 
-            outputs = simple_model(inputs)
+                optimizer.zero_grad()
 
-            loss_function = simple_loss(outputs, labels)
-            loss_function.backward()
-            
-            optimizer.step()
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
-            progress_bar(i, len(train_data_list[dataset.N_TASKS-1]), epoch, t, float(loss_function))
+                outputs = simple_model(inputs)
+
+                loss_function = simple_loss(outputs, labels)
+                loss_function.backward()
+                
+                optimizer.step()
+
+                progress_bar(i, len(train_data_list[dataset.N_TASKS-1]), epoch, t, float(loss_function))
 
     logme_simple_model_score = []
 
     for t in range(dataset.N_TASKS):
+        # print("4. Calculating REVERSE LOGME SIMPLE MODEL " + str(epoch) + " EPOCH ON TASK" + str(t+1))
         need_to_change_list = list(range(t*dataset.N_CLASSES_PER_TASK, t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
         # stay_list = need_to_change_list.copy()
         stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
@@ -416,7 +424,6 @@ def simple_model_logme_score(args: Namespace, epoch: int, dataset: ContinualData
                                          cal_buffer = False))
         
     del simple_model
-    del simple_loss
     return logme_simple_model_score
 
 def get_logme(model: ContinualModel, dataset: ContinualDataset, train_loader: DataLoader, t: int,
@@ -488,9 +495,10 @@ def get_logme(model: ContinualModel, dataset: ContinualDataset, train_loader: Da
 
     if dataset.SETTING == "task-il":
         alternate_label = labels_arr.copy()
-        for i in range(len(alternate_label)):
-            if alternate_label[i] in need_to_change_list:
-                alternate_label[i] = stay_list[need_to_change_list.index(alternate_label[i])]
+        if cal_buffer != True:
+            for i in range(len(alternate_label)):
+                if alternate_label[i] in need_to_change_list:
+                    alternate_label[i] = stay_list[need_to_change_list.index(alternate_label[i])]
         alternate_label = np.array(alternate_label)
 
         return logme.fit(features_arr, alternate_label)
@@ -703,7 +711,7 @@ def simple_complexity(args: Namespace, dataset: ContinualDataset, train_loader: 
         elif k>t:
             break
     
-    del simple_model
+    # del simple_model
     del simple_loss
     
-    return 100 - simple_accs
+    return 100 - simple_accs, simple_model

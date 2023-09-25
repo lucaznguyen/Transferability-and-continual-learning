@@ -20,7 +20,17 @@ import datasets.random_setting
 from datasets import get_dataset
 import sys
 
+# from scipy.spatial import distance_matrix
+import pandas as pd
+
 import torch.nn as nn
+
+def distance_matrix(A, B):
+    dist = 0
+    for i in range(len(A)):
+        for j in range(len(A[0])):
+            dist = dist + abs(A[i][j]-B[i][j])
+    return dist
 
 def mask_classes(outputs: torch.Tensor, dataset: ContinualDataset, k: int) -> None:
     """
@@ -58,7 +68,12 @@ def evaluate(model: ContinualModel, dataset: ContinualDataset, last=False) -> li
         label_list = []
         for data in test_loader:
             with torch.no_grad():
-                inputs, labels = data
+                # print(data)
+                # print("LEN:", len(data))
+                if len(data) == 2:
+                    inputs, labels = data
+                elif len(data) == 3:
+                    inputs, labels, _ = data
                 # inputs, labels = inputs.to(model.device), labels.to(model.device
                 for lab in labels:
                     label_list.append(int(lab))
@@ -70,7 +85,11 @@ def evaluate(model: ContinualModel, dataset: ContinualDataset, last=False) -> li
         correct, total = 0.0, 0.0
         for data in test_loader:
             with torch.no_grad():
-                inputs, labels = data
+                if len(data) == 2:
+                    inputs, labels = data
+                elif len(data) == 3:
+                    inputs, labels, _ = data
+                # inputs, labels = data
                 inputs, labels = inputs.to(model.device), labels.to(model.device)
 
                 outputs = model(inputs)
@@ -151,6 +170,10 @@ def linear_probing(model: ContinualModel, dataset: ContinualDataset,
         correct = 0
         total = 0
         for data in test_loader:
+            if len(data) == 2:
+                inputs, labels = data
+            elif len(data) == 3:
+                inputs, labels, _ = data
             inputs, labels = data
 
             features = model(x = inputs, big_returnt = "features")
@@ -187,9 +210,10 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     octe_score = []
     logme_score = []
     logme_buffer_score = []
-    logme_model_score = []
-    logme_simple_model_score_1epoch = []
-    logme_simple_model_score_50epoch = []
+
+    logme_model_list = []
+    logme_simple_model_1epoch_list = []
+    logme_simple_model_50epoch_list = []
     
     linear_probing_score_1epoch = []
     linear_probing_score_50epoch = []
@@ -202,6 +226,8 @@ def train(model: ContinualModel, dataset: ContinualDataset,
 
     get_data_sample_from_current_task = []
     get_data_label_from_current_task = []
+
+    task_distance = []
 
 
     if args.csv_log:
@@ -223,23 +249,63 @@ def train(model: ContinualModel, dataset: ContinualDataset,
         # print("count_unique_label_list", datasets.random_setting.count_unique_label_list)
 
     # print("PREPARATION PHASE")
-    # for t in range(dataset.N_TASKS):
+    for t in range(dataset.N_TASKS):
     #     print("TASK", t)
     #     model.net.train()
-    #     _, _ = dataset_copy.get_data_loaders()
-    # if model.NAME != 'icarl' and model.NAME != 'pnn':
-        # random_results_class, random_results_task = evaluate_random(model, dataset_copy)
+        train_loader, _ = dataset_copy.get_data_loaders()
 
-    # print(file=sys.stderr)
-    # print("TRAINING PHASE")
+        if dataset.SETTING == "task-il":
+            cluster_list = list(range(t*dataset.N_CLASSES_PER_TASK, (t+1)*dataset.N_CLASSES_PER_TASK))
+        else:
+            cluster_list = list(range(0, 10))
+        
+        # cluster_list = [str(cluster) for cluster in cluster_list]
+        
+        df = dict()
+        for cluster in cluster_list:
+            df[cluster] = []
+        
+        for i, data in enumerate(train_loader):
+            inputs, label_list, _ = data
+            label_list = label_list.type(torch.LongTensor)
+            for j, label in enumerate(label_list):
+                df[int(label)].append(np.array(inputs[j]))
+
+        for cluster in cluster_list:
+            df[cluster] = np.array(df[cluster])
+            df[cluster] = np.array(np.mean(df[cluster], axis = 0))
+            # print(np.array(df[cluster]).shape)
+        
+        dist = 0
+        for i in range(len(cluster_list)-1):
+            for j in range(i+1, len(cluster_list)):
+                
+                dist = dist + distance_matrix(df[cluster_list[i]][0], df[cluster_list[j]][0])
+
+        task_distance.append(dist)
+
+        train_data_list.append(train_loader)
+
+    if args.train_log == 0:
+        return task_distance, results, backward_transfer(results), forget, 0,\
+            complex_list_1epoch, complex_list_25epoch,\
+            complex_list_50epoch, leep_score, leep_buffer_score,\
+            logme_score, logme_buffer_score,\
+            logme_model_list, logme_simple_model_1epoch_list, logme_simple_model_50epoch_list,\
+            0, bwt_leep
 
     for t in range(dataset.N_TASKS):
+
+        logme_model_score = []
+        logme_simple_model_score_1epoch = []
+        logme_simple_model_score_50epoch = []
+
         torch.cuda.empty_cache()
         print("TASK", t)
 
         model.net.train()
         train_loader, test_loader = dataset.get_data_loaders()
-        train_data_list.append(train_loader)
+        # train_data_list.append(train_loader)
 
         # print("model parammmmmmmmmmmmm:")
         # for p in model.parameters():
@@ -259,6 +325,7 @@ def train(model: ContinualModel, dataset: ContinualDataset,
 
             need_to_change_list = list(range(t*dataset.N_CLASSES_PER_TASK, t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
             stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+            
             leep_score.append(get_leep(model, dataset, train_data_list[t], t,
                                         get_data_sample_from_current_task,
                                         get_data_label_from_current_task,
@@ -267,11 +334,13 @@ def train(model: ContinualModel, dataset: ContinualDataset,
                                         get_data_sample_from_current_task,
                                         get_data_label_from_current_task,
                                         cal_buffer = True))
+            # print("1. Calculating LOGME FROM TASK " + str(t) + " TO TASK " + str(t+1))
             logme_score.append(get_logme(model, dataset, train_data_list[t], t,
                                          get_data_sample_from_current_task,
                                          get_data_label_from_current_task,
                                          need_to_change_list, stay_list,
                                          cal_buffer = False))
+            # print("2. Calculating LOGME-BUFFER FROM TASK " + str(t) + " TO TASK " + str(t+1))
             logme_buffer_score.append(get_logme(model, dataset, train_data_list[t], t,
                                          get_data_sample_from_current_task,
                                          get_data_label_from_current_task,
@@ -354,8 +423,8 @@ def train(model: ContinualModel, dataset: ContinualDataset,
         print("\n")
         print("Accuracy for task(s):", t+1, " ", "["+dataset.SETTING+"]",":", mean_acc)
 
-        # 1 epoch
-        complex_1epoch = simple_complexity(args, dataset, train_loader, 1, t)
+        #1 epoch
+        complex_1epoch, simple_model_1epoch = simple_complexity(args, dataset, train_loader, 1, t)
         complex_list_1epoch.append(complex_1epoch)
         total_complex_1epoch = total_complex_1epoch + complex_1epoch
         print("Simple Complexity 1 epoch:", complex_1epoch)
@@ -369,36 +438,70 @@ def train(model: ContinualModel, dataset: ContinualDataset,
 
         #50 epoch
         if args.offline_complexity:
-            complex_50epoch = simple_complexity(args, dataset, train_loader, 50, t)
+            complex_50epoch, simple_model_50epoch = simple_complexity(args, dataset, train_loader, 50, t)
         else:
             complex_50epoch = 0
         complex_list_50epoch.append(complex_50epoch)
         total_complex_50epoch = total_complex_50epoch + complex_50epoch
         print("Simple Complexity 50 epoch:", complex_50epoch)
 
-    bwt_leep = 0
-    for t in range(dataset.N_TASKS):
-        need_to_change_list = list(range(t*dataset.N_CLASSES_PER_TASK, t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
-        stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
-        logme_model_score.append(get_logme(model, dataset, train_data_list[t], t,
-                                         get_data_sample_from_current_task,
-                                         get_data_label_from_current_task,
-                                         need_to_change_list, stay_list,
-                                         cal_buffer = False))
+        for sub_t in range(dataset.N_TASKS):
+        # for sub_t in range(t + 1):
+            need_to_change_list = list(range(sub_t*dataset.N_CLASSES_PER_TASK, sub_t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
+            stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+            # print("3. Calculating REVERSE LOGME CONTINUAL MODEL ON TASK " + str(t+1))
+            logme_model_score.append(get_logme(model, dataset, train_data_list[sub_t], sub_t,
+                                            get_data_sample_from_current_task,
+                                            get_data_label_from_current_task,
+                                            need_to_change_list, stay_list,
+                                            cal_buffer = False))
 
-    logme_simple_model_score_1epoch = simple_model_logme_score(args, 1, dataset, train_data_list, t,
-                get_data_sample_from_current_task, get_data_label_from_current_task,
-                need_to_change_list, stay_list)
-    if args.offline_logme:
-        logme_simple_model_score_50epoch = simple_model_logme_score(args, 50, dataset, train_data_list, t,
+        logme_simple_model_score_1epoch = simple_model_logme_score(args, 1, dataset, train_data_list, t,
                     get_data_sample_from_current_task, get_data_label_from_current_task,
-                    need_to_change_list, stay_list)
-    else:
-        logme_simple_model_score_50epoch = 0
+                    need_to_change_list, stay_list,
+                    dataset.N_TASKS,
+                    simple_model = simple_model_1epoch)
+        if args.offline_logme:
+            logme_simple_model_score_50epoch = simple_model_logme_score(args, 50, dataset, train_data_list, t,
+                        get_data_sample_from_current_task, get_data_label_from_current_task,
+                        need_to_change_list, stay_list,
+                        dataset.N_TASKS,
+                        simple_model = simple_model_50epoch)
+        else:
+            logme_simple_model_score_50epoch = 0
 
-    return results, backward_transfer(results), forget, mean_acc/100,\
-            total_complex_1epoch/100, total_complex_25epoch/100,\
-            total_complex_50epoch/100, np.mean(leep_score), np.mean(leep_buffer_score),\
-            np.mean(logme_score), np.mean(logme_buffer_score),\
-            logme_model_score, logme_simple_model_score_1epoch, logme_simple_model_score_50epoch,\
+        logme_model_list.append(logme_model_score)
+        logme_simple_model_1epoch_list.append(logme_simple_model_score_1epoch)
+        logme_simple_model_50epoch_list.append(logme_simple_model_score_50epoch)
+
+
+
+    # for t in range(dataset.N_TASKS):
+    #     need_to_change_list = list(range(t*dataset.N_CLASSES_PER_TASK, t*dataset.N_CLASSES_PER_TASK+dataset.N_CLASSES_PER_TASK))
+    #     stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+    #     # print("3. Calculating REVERSE LOGME CONTINUAL MODEL ON TASK " + str(t+1))
+    #     logme_model_score.append(get_logme(model, dataset, train_data_list[t], t,
+    #                                      get_data_sample_from_current_task,
+    #                                      get_data_label_from_current_task,
+    #                                      need_to_change_list, stay_list,
+    #                                      cal_buffer = False))
+
+    # logme_simple_model_score_1epoch = simple_model_logme_score(args, 1, dataset, train_data_list, t,
+    #             get_data_sample_from_current_task, get_data_label_from_current_task,
+    #             need_to_change_list, stay_list)
+    # if args.offline_logme:
+    #     logme_simple_model_score_50epoch = simple_model_logme_score(args, 50, dataset, train_data_list, t,
+    #                 get_data_sample_from_current_task, get_data_label_from_current_task,
+    #                 need_to_change_list, stay_list)
+    # else:
+    #     logme_simple_model_score_50epoch = 0
+
+    bwt_leep = 0
+
+    return  task_distance,\
+            results, backward_transfer(results), forget, mean_acc/100,\
+            complex_list_1epoch, complex_list_25epoch,\
+            complex_list_50epoch, leep_score, leep_buffer_score,\
+            logme_score, logme_buffer_score,\
+            logme_model_list, logme_simple_model_1epoch_list, logme_simple_model_50epoch_list,\
             np.mean(leep_score)+(100-results[0][0])/100, bwt_leep

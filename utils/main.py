@@ -26,7 +26,7 @@ from datasets import NAMES as DATASET_NAMES
 from models import get_all_models
 
 from argparse import ArgumentParser
-from utils.args import add_management_args
+from utils.args import add_management_args, add_experiment_args
 from datasets import ContinualDataset
 from utils.continual_training import train as ctrain
 from utils.training import train
@@ -61,6 +61,7 @@ def parse_args():
     #                     help='Sequence amount.')
     parser.add_argument('--model', type=str, required=True,
                         help='Model name.', choices=get_all_models())
+    # add_experiment_args(parser)
     parser.add_argument('--load_best_args', action='store_true',
                         help='Loads the best arguments for each method, '
                              'dataset and memory buffer.')
@@ -135,6 +136,7 @@ def main(args=None):
     #     datasets.random_setting.target_test_tensor,\
     #     datasets.random_setting.not_aug_img_test_tensor = get_tensor(args.dataset)
 
+    task_distance_seq = []
     leep_seq = []
     leep_buffer_seq = []
     # octe_seq = []
@@ -200,6 +202,8 @@ def main(args=None):
                 str(int((args.buffer_size/3)*100/1200))+"pbuffer"+\
                 str(lower)+str(upper)+\
                 ".csv"
+    if args.train_log == 0:
+        name = "no-train-" + name
     
     sequence_range = range(lower, upper)
         
@@ -316,13 +320,15 @@ def main(args=None):
                 setproctitle.setproctitle('{}_{}_{}'.format(args.model, args.buffer_size if 'buffer_size' in args else 0, args.dataset))     
 
                 if isinstance(dataset, ContinualDataset):
+                    task_distance,\
                     full_accs, bwt, total_forget, acc,\
                     complex_1epoch, complex_25epoch, complex_50epoch,\
                     leep, leep_buffer,\
                     logme, logme_buffer, logme_model,\
                     logme_simple_model_1epoch, logme_simple_model_50epoch,\
                     leep_1stacc, bwt_leep = train(model, dataset, args)
-
+                    
+                    task_distance_seq.append(task_distance)
                     full_accs_seq.append(full_accs)
                     acc_seq.append(acc)
                     bwt_seq.append(bwt)
@@ -343,6 +349,7 @@ def main(args=None):
                     sequence_sample_seq.append(datasets.random_setting.random_N_SAMPLES_PER_CLASS)
                     sequence_unique_seq.append(datasets.random_setting.count_unique_label_list)
                     
+                    print("task_distance = ", task_distance_seq)
                     print("bwt = ", bwt_seq)
                     print("forget = ", forget_seq)
                     print("full_accs = ", full_accs_seq)
@@ -363,7 +370,8 @@ def main(args=None):
                     print("sequence_sample =", sequence_sample_seq)
                     print("sequence_unique =", sequence_unique_seq)
 
-                    full = [[bwt_seq[i], forget_seq[i], full_accs_seq[i],
+                    full = [[   task_distance_seq[i],
+                                bwt_seq[i], forget_seq[i], full_accs_seq[i],
                                 acc_seq[i], complex_1epoch_seq[i], complex_25epoch_seq[i], complex_50epoch_seq[i],
                                 leep_seq[i], leep_buffer_seq[i],
                                 logme_seq[i], logme_buffer_seq[i],
@@ -371,13 +379,14 @@ def main(args=None):
                                 leep_1stacc_seq[i], bwt_leep_seq[i],
                                 sequence_label_seq[i], sequence_sample_seq[i], sequence_unique_seq[i]]
                                 for i in range(index+1)]
-                    col = ["bwt", "forget", "full_accs",
-                        "acc", "complex_1epoch", "complex_25epoch", "complex_50epoch",
-                        "leep", "leep_buffer",
-                        "logme", "logme_buffer",
-                        "logme_model", "logme_simple_model_1epoch", "logme_simple_model_50epoch",
-                        "leep_1stacc", "bwt_leep",
-                        "sequence_label", "sequence_sample", "sequence_unique"]
+                    col = [ "task_distance",
+                            "bwt", "forget", "full_accs",
+                            "acc", "complex_1epoch", "complex_25epoch", "complex_50epoch",
+                            "leep", "leep_buffer",
+                            "logme", "logme_buffer",
+                            "logme_model", "logme_simple_model_1epoch", "logme_simple_model_50epoch",
+                            "leep_1stacc", "bwt_leep",
+                            "sequence_label", "sequence_sample", "sequence_unique"]
                     
                     df = pd.DataFrame(data=full, columns=col)
                     if args.num_seq <= 100:

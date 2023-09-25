@@ -41,18 +41,18 @@ def icarl_replay(self, dataset, val_set_split=0):
 
             # REDUCE AND MERGE TRAINING SET
             
-            temp = self.buffer.labels.cpu().numpy()[:len(self.buffer)][~buff_val_mask]
-            temp = [[i] for i in temp]
+            # temp = self.buffer.labels.cpu().numpy()[:len(self.buffer)][~buff_val_mask]
+            # temp = [[i] for i in temp]
 
-            dataset.train_loader.dataset.labels = np.concatenate([
-                dataset.train_loader.dataset.labels[~val_train_mask],
-                # self.buffer.labels.cpu().numpy()[:len(self.buffer)][~buff_val_mask]
-                temp
-                ])
-            dataset.train_loader.dataset.imgs = data_concatenate([
-                dataset.train_loader.dataset.imgs[~val_train_mask],
-                refold_transform((self.buffer.examples)[:len(self.buffer)][~buff_val_mask])
-                ])
+            # dataset.train_loader.dataset.labels = np.concatenate([
+            #     dataset.train_loader.dataset.labels[~val_train_mask],
+            #     # self.buffer.labels.cpu().numpy()[:len(self.buffer)][~buff_val_mask]
+            #     temp
+            #     ])
+            # dataset.train_loader.dataset.imgs = data_concatenate([
+            #     dataset.train_loader.dataset.imgs[~val_train_mask],
+            #     refold_transform((self.buffer.examples)[:len(self.buffer)][~buff_val_mask])
+            #     ])
 
             if val_set_split > 0:
                 # REDUCE AND MERGE VALIDATION SET
@@ -90,14 +90,14 @@ def icarl_replay(self, dataset, val_set_split=0):
                     refold_transform = lambda x: (x.cpu()*255).squeeze(1).type(torch.uint8)
 
             # REDUCE AND MERGE TRAINING SET
-            dataset.train_loader.dataset.targets = np.concatenate([
-                dataset.train_loader.dataset.targets[~val_train_mask],
-                self.buffer.labels.cpu().numpy()[:len(self.buffer)][~buff_val_mask]
-                ])
-            dataset.train_loader.dataset.data = data_concatenate([
-                dataset.train_loader.dataset.data[~val_train_mask],
-                refold_transform((self.buffer.examples)[:len(self.buffer)][~buff_val_mask])
-                ])
+            # dataset.train_loader.dataset.targets = np.concatenate([
+            #     dataset.train_loader.dataset.targets[~val_train_mask],
+            #     self.buffer.labels.cpu().numpy()[:len(self.buffer)][~buff_val_mask]
+            #     ])
+            # dataset.train_loader.dataset.data = data_concatenate([
+            #     dataset.train_loader.dataset.data[~val_train_mask],
+            #     refold_transform((self.buffer.examples)[:len(self.buffer)][~buff_val_mask])
+            #     ])
 
             if val_set_split > 0:
                 # REDUCE AND MERGE VALIDATION SET
