@@ -115,7 +115,7 @@ def main(args=None):
     if args is None:
         args = parse_args()
 
-    benchmark_dir = "benchmark/"+str(args.n_task_per_seq)+" task/1200 sample/"+args.case+".csv"
+    benchmark_dir = "benchmark/"+str(args.n_task_per_seq)+" task/"+args.case+".csv"
 
     datasets.random_setting.random_N_TASKS = args.n_task_per_seq
     datasets.random_setting.random_N_CLASSES_PER_TASK = args.n_class_per_task
@@ -295,14 +295,14 @@ def main(args=None):
                 loss = dataset.get_loss()
                 model = get_model(args, backbone, loss, dataset.get_transform())
 
-                if args.model == "bic":
-                    model.n_tasks = datasets.random_setting.random_N_TASKS
-                    model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
+                # if args.model == "bic":
+                #     model.n_tasks = datasets.random_setting.random_N_TASKS
+                #     model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
 
-                if args.model == "icarl":
-                    model.dataset = get_dataset(args)
-                    model.eye = torch.eye(datasets.random_setting.random_N_CLASSES_PER_TASK *
-                             datasets.random_setting.random_N_TASKS).to(model.device)
+                # if args.model == "icarl":
+                #     model.dataset = get_dataset(args)
+                #     model.eye = torch.eye(datasets.random_setting.random_N_CLASSES_PER_TASK *
+                #              datasets.random_setting.random_N_TASKS).to(model.device)
 
                 if args.model == "xder":
                     model.cpt = datasets.random_setting.random_N_CLASSES_PER_TASK
