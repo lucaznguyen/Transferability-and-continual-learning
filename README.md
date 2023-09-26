@@ -42,7 +42,7 @@ python utils/main.py --model er --dataset random-cifar10 --n_class_per_task 3 --
 ```
 + Run the experiments on 10 tasks in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
-python utils/main.py --model er --dataset random-cifar10 --n_class_per_task 10 --n_task_per_seq 10 --num_seq 50 --n_sample 500 --case 10task_disjoint_cifar100 --buffer_size 1800 --lr 0.1 --minibatch_size 32 --batch_size 32 --n_epochs 50
+python utils/main.py --model er --dataset random-cifar100 --n_class_per_task 10 --n_task_per_seq 10 --num_seq 50 --n_sample 500 --case 10task_disjoint_cifar100 --buffer_size 1800 --lr 0.1 --minibatch_size 32 --batch_size 32 --n_epochs 50
 ```
 + Run the experiments on 10 tasks in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
@@ -57,7 +57,7 @@ python utils/main.py --model derpp --dataset random-cifar10 --n_class_per_task 3
 ```
 + Run the experiments on 10 tasks in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
-python utils/main.py --model derpp --dataset random-cifar10 --n_class_per_task 10 --n_task_per_seq 10 --num_seq 50 --n_sample 500 --case 10task_disjoint_cifar100 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.1 --beta 0.5 --n_epochs 50
+python utils/main.py --model derpp --dataset random-cifar100 --n_class_per_task 10 --n_task_per_seq 10 --num_seq 50 --n_sample 500 --case 10task_disjoint_cifar100 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.1 --beta 0.5 --n_epochs 50
 ```
 + Run the experiments on 10 tasks in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
