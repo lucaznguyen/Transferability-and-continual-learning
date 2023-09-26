@@ -36,15 +36,15 @@ pip3 install torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio==2.0.2+cu11
 
 + ## ER
 
-+ Run the experiments on 5 task in CIFAR-10 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
++ Run the experiments on 5 tasks in CIFAR-10 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
 python utils/main.py --model er --dataset random-cifar10 --n_class_per_task 3 --n_task_per_seq 5 --num_seq 100 --case 5task_1mutual_cifar10 --buffer_size 1800 --lr 0.1 --minibatch_size 32 --batch_size 32 --n_epochs 50
 ```
-+ Run the experiments on 5 task in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
++ Run the experiments on 10 tasks in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
 python utils/main.py --model derpp --dataset random-cifar10 --n_class_per_task 10 --n_task_per_seq 10 --num_seq 100 --case 10task_disjoint_cifar100 --buffer_size 1800 --lr 0.1 --minibatch_size 32 --batch_size 32 --n_epochs 50
 ```
-+ Run the experiments on 5 task in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
++ Run the experiments on 10 tasks in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
 python utils/main.py --model derpp --dataset random-tinyimg --n_class_per_task 20 --n_task_per_seq 10 --num_seq 100 --case 10task_disjoint_tinyimg --buffer_size 1800 --lr 0.1 --minibatch_size 32 --batch_size 32 --n_epochs 100
 ```
@@ -55,11 +55,11 @@ python utils/main.py --model derpp --dataset random-tinyimg --n_class_per_task 2
 ```
 python utils/main.py --model derpp --dataset random-cifar10 --n_class_per_task 3 --n_task_per_seq 5 --num_seq 100 --case 5task_1mutual_cifar10 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.1 --beta 0.5 --n_epochs 50
 ```
-+ Run the experiments on 5 task in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
++ Run the experiments on 10 tasks in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
 python utils/main.py --model derpp --dataset random-cifar10 --n_class_per_task 10 --n_task_per_seq 10 --num_seq 100 --case 10task_disjoint_cifar100 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.1 --beta 0.5 --n_epochs 50
 ```
-+ Run the experiments on 5 task in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
++ Run the experiments on 10 tasks in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
 python utils/main.py --model derpp --dataset random-tinyimg --n_class_per_task 20 --n_task_per_seq 10 --num_seq 100 --case 10task_disjoint_tinyimg --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.2 --beta 0.5 --n_epochs 100
 ```
