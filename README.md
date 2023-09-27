@@ -34,7 +34,7 @@ pip3 install torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio==2.0.2+cu11
 + Percentage of buffer used in each class is $\frac{\text{buffer-size}/\text{n-class-per-task}}{\text{n-sample-per-class}}$.
 + Change the `--buffer_size` to 180, 360, 900, 1800 for running experiments.
 
-+ ## ER
+## ER
 
 + Run the experiments on 5 tasks in CIFAR-10 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
