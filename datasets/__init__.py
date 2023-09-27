@@ -19,6 +19,8 @@ def get_all_models():
 
 NAMES = {}
 for model in get_all_models():
+    if ('datasets.' + model) == 'datasets.':
+        continue
     mod = importlib.import_module('datasets.' + model)
     dataset_classes_name = [x for x in mod.__dir__() if 'type' in str(type(getattr(mod, x))) and 'ContinualDataset' in str(inspect.getmro(getattr(mod, x))[1:])]
     for d in dataset_classes_name:
