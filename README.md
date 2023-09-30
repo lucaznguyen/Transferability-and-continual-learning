@@ -46,6 +46,7 @@ python utils/main.py --model agem --dataset random-cifar100 --n_class_per_task 1
 + Run the experiments on 10 tasks in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
 python utils/main.py --model agem --dataset random-tinyimg --n_class_per_task 20 --n_task_per_seq 10 --num_seq 50 --n_sample 500 --case 10task_disjoint_tinyimg --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --n_epochs 100
+```
 
 ## ER
 
