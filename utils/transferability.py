@@ -5,6 +5,7 @@ from numba import njit
 
 from backbone.MNISTMLP import MNISTMLP
 from backbone.ResNet18 import resnet18
+from backbone.MNISTResNet18 import mnist_resnet18
 
 import math
 import random
@@ -356,7 +357,12 @@ def simple_model_logme_score(args: Namespace, epoch: int, dataset: ContinualData
     if simple_model == None:
         simple_loss = torch.nn.CrossEntropyLoss()
 
-        if "mnist" in args.dataset:
+        if args.dataset == "random-mnist-resnet":
+            if dataset.SETTING == "task-il":
+                simple_model = mnist_resnet18(dataset.N_CLASSES_PER_TASK, grayscale=True)
+            if dataset.SETTING == "class-il":
+                simple_model = mnist_resnet18(datasets.random_setting.count_unique_label_list[t], grayscale=True)
+        elif "mnist" in args.dataset:
         # if args.dataset == "random-mnist" or args.dataset == "random-fashion-mnist":
             if dataset.SETTING == "task-il":
                 simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
@@ -617,8 +623,12 @@ def simple_complexity(args: Namespace, dataset: ContinualDataset, train_loader: 
     
     simple_loss = torch.nn.CrossEntropyLoss()
 
-    # if args.dataset == "random-mnist" or args.dataset == "random-fashion-mnist":
-    if "mnist" in args.dataset:
+    if args.dataset == "random-mnist-resnet":
+        if dataset.SETTING == "task-il":
+            simple_model = mnist_resnet18(dataset.N_CLASSES_PER_TASK, grayscale=True)
+        if dataset.SETTING == "class-il":
+            simple_model = mnist_resnet18(datasets.random_setting.count_unique_label_list[t], grayscale=True)
+    elif "mnist" in args.dataset:
         if dataset.SETTING == "task-il":
             simple_model = MNISTMLP(28 * 28, dataset.N_CLASSES_PER_TASK)
         if dataset.SETTING == "class-il":
