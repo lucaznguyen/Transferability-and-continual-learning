@@ -37,7 +37,7 @@ pip3 install torch==2.0.1+cu118 torchvision==0.15.2+cu118 torchaudio==2.0.2+cu11
 ## A-GEM
 + Run the experiments on 5 tasks in CIFAR-10 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
-python utils/main.py --model agem --dataset random-cifar10 --n_class_per_task 3 --n_task_per_seq 5 --num_seq 50 --n_sample 5000 --case 5task_1mutual_cifar10 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --n_epochs 50
+python utils/main.py --model agem --dataset random-cifar10 --n_class_per_task 3 --n_task_per_seq 5 --num_seq 20 --n_sample 5000 --case 5task_1mutual_cifar10 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --n_epochs 50 --offline_logme 0 --offline_complexity 0
 ```
 + Run the experiments on 10 tasks in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
@@ -67,7 +67,7 @@ python utils/main.py --model er --dataset random-tinyimg --n_class_per_task 20 -
 
 + Run the experiments on 5 task in CIFAR-10 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
-python utils/main.py --model derpp --dataset random-cifar10 --n_class_per_task 3 --n_task_per_seq 5 --num_seq 50 --n_sample 5000 --case 5task_1mutual_cifar10 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.1 --beta 0.5 --n_epochs 50
+python utils/main.py --model derpp --dataset random-cifar10 --n_class_per_task 3 --n_task_per_seq 5 --num_seq 20 --n_sample 5000 --case 5task_1mutual_cifar10 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.1 --beta 0.5 --n_epochs 50 --offline_logme 0 --offline_complexity 0
 ```
 + Run the experiments on 10 tasks in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
@@ -75,14 +75,14 @@ python utils/main.py --model derpp --dataset random-cifar100 --n_class_per_task 
 ```
 + Run the experiments on 10 tasks in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
-python utils/main.py --model derpp --dataset random-tinyimg --n_class_per_task 20 --n_task_per_seq 10 --num_seq 50 --n_sample 500 --case 10task_disjoint_tinyimg --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.2 --beta 0.5 --n_epochs 100
+python utils/main.py --model derpp --dataset random-tinyimg --n_class_per_task 20 --n_task_per_seq 10 --num_seq 20 --n_sample 500 --case 10task_disjoint_tinyimg --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --alpha 0.2 --beta 0.5 --n_epochs 100 --offline_logme 0 --offline_complexity 0
 ```
 
 ## XDER
 
 + Run the experiments on 5 task in CIFAR-10 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
-python utils/main.py --model xder --dataset random-cifar10 --num_seq 50 --n_class_per_task 3 --n_task_per_seq 5 --n_sample 5000 --case 5task_1mutual_cifar10 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --m 0.7 --alpha 0.2 --beta 1.0 --gamma 0.85 --optim_wd 0 --lambd 0.05 --eta 0.001 --simclr_temp 5 --optim_mom 1e-06 --simclr_batch_size 32 --simclr_num_aug 2 --n_epochs 50
+python utils/main.py --model xder --dataset random-cifar10 --num_seq 20 --n_class_per_task 3 --n_task_per_seq 5 --n_sample 5000 --case 5task_1mutual_cifar10 --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --m 0.7 --alpha 0.2 --beta 1.0 --gamma 0.85 --optim_wd 0 --lambd 0.05 --eta 0.001 --simclr_temp 5 --optim_mom 1e-06 --simclr_batch_size 32 --simclr_num_aug 2 --n_epochs 50 --offline_logme 0 --offline_complexity 0
 ```
 + Run the experiments on 10 task in CIFAR-100 dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
@@ -90,5 +90,5 @@ python utils/main.py --model xder --dataset random-cifar100 --num_seq 50 --n_cla
 ```
 + Run the experiments on 10 task in tinyImageNet dataset, adjust buffer by `360`, `900`, `1800` and `3600`:
 ```
-python utils/main.py --model xder --dataset random-tinyimg --num_seq 50 --n_class_per_task 20 --n_task_per_seq 10 --n_sample 500 --case 10task_disjoint_tinyimg --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --m 0.7 --alpha 0.3 --beta 0.8 --gamma 0.85 --optim_wd 0 --lambd 0.05 --eta 0.001 --simclr_temp 5 --optim_mom 0 --simclr_batch_size 64 --simclr_num_aug 2 --n_epochs 100
+python utils/main.py --model xder --dataset random-tinyimg --num_seq 20 --n_class_per_task 20 --n_task_per_seq 10 --n_sample 500 --case 10task_disjoint_tinyimg --buffer_size 1800 --lr 0.03 --minibatch_size 32 --batch_size 32 --m 0.7 --alpha 0.3 --beta 0.8 --gamma 0.85 --optim_wd 0 --lambd 0.05 --eta 0.001 --simclr_temp 5 --optim_mom 0 --simclr_batch_size 64 --simclr_num_aug 2 --n_epochs 100 --offline_logme 0 --offline_complexity 0
 ```
