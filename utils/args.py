@@ -40,6 +40,8 @@ def add_experiment_args(parser: ArgumentParser) -> None:
                         help='Calculate logme simple model 50 epoch.')
     parser.add_argument('--drive', type=int, default = 0,
                         help='Save on drive.')
+    parser.add_argument('--task_selection', type = str, default = 'best',
+                        help= 'random: randomize the task, best: best task selection, worst: worst task selection')
 
     parser.add_argument('--lr', type=float, required=True,
                         help='Learning rate.')
