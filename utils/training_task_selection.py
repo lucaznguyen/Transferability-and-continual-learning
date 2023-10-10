@@ -348,7 +348,7 @@ def train(model: ContinualModel, dataset: ContinualDataset,
         results.append(accs)
 
         if t:
-            forget = forget + forgetting(results)
+            forget = 0# forget + forgetting(results)
         # print("forget", forget_list)
 
 
@@ -433,9 +433,10 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     #     logme_simple_model_score_50epoch = 0
 
     bwt_leep = 0
+    bwt = 0#backward_transfer(results)
 
     return  task_distance,\
-            results, backward_transfer(results), forget, mean_acc/100,\
+            results, bwt, forget, mean_acc/100,\
             complex_list_1epoch, complex_list_25epoch,\
             complex_list_50epoch, leep_score, leep_buffer_score,\
             logme_score, logme_buffer_score,\
