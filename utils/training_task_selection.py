@@ -141,8 +141,8 @@ def train(model: ContinualModel, dataset: ContinualDataset,
 
     original_position = list(range(dataset.N_TASKS))
 
-    train_data_list = []
-    test_data_list = []
+    train_data_list = [[]]*dataset.N_TASKS
+    test_data_list = [[]]*dataset.N_TASKS
     max_num_list = []
 
     get_data_sample_from_current_task = []
@@ -164,8 +164,8 @@ def train(model: ContinualModel, dataset: ContinualDataset,
     
     forget = 0
 
-    max_class_current_task_list = []
-    position = []
+    max_class_current_task_list = [0]*dataset.N_TASKS
+    position = [0]*dataset.N_TASKS
 
     # print("PREPARATION PHASE")
     for t in range(dataset.N_TASKS):
@@ -204,11 +204,16 @@ def train(model: ContinualModel, dataset: ContinualDataset,
         if t == 0:
             train_loader, test_loader = original_train_data_list[0], original_test_data_list[0]
             print(type(train_loader))
-            train_data_list.append(train_loader)
-            test_data_list.append(test_loader)
-            max_num_list.append(max_class_current_task_list[0])
-            position.append(original_position[0])
+            train_data_list[0] = train_loader
+            test_data_list[0] = test_loader
+            max_num_list[0] = max_class_current_task_list[0]
+            position = original_position[0]
             random_num = 0
+
+            max_class_current_task_list.pop(random_num)
+            original_train_data_list.pop(random_num)
+            original_test_data_list.pop(random_num)
+            original_position.pop(random_num)
 
         if hasattr(model, 'begin_task'):
             model.begin_task(dataset)
@@ -225,40 +230,148 @@ def train(model: ContinualModel, dataset: ContinualDataset,
             # original_test_data_list = swap_class_to_current_task(original_test_data_list, dataset.N_CLASSES_PER_TASK, t)
 
             print("Remaining tasks:", original_train_data_list)
+            
+            if args.task_selection == "altered":
+                print("hello this is new best strategies")
+                if len(original_train_data_list) >= 2:
+                    all_logme_future = []
+                    for j, train_data in enumerate(original_train_data_list):
+                        need_to_change_list = list(range(max_class_current_task_list[j]-dataset.N_CLASSES_PER_TASK + 1, max_class_current_task_list[j]+1))
+                        stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
 
-            all_logme_future = []
-            for j, train_data in enumerate(original_train_data_list):
-                need_to_change_list = list(range(max_class_current_task_list[j]-dataset.N_CLASSES_PER_TASK + 1, max_class_current_task_list[j]+1))
+                        print("need_to_change:", need_to_change_list)
+
+                        all_logme_future.append(get_logme(model, dataset, train_data, t,
+                                                get_data_sample_from_current_task,
+                                                get_data_label_from_current_task,
+                                                need_to_change_list, stay_list,
+                                                cal_buffer = False))
+                
+                    print("LogMe score for these tasks:", all_logme_future)
+
+                    all_logme_future_copy = all_logme_future.copy()
+                    all_logme_future_copy.sort(reverse=True)
+
+                    max_index = all_logme_future.index(all_logme_future_copy[0])
+                    second_max_index = all_logme_future.index(all_logme_future_copy[1])
+
+                    #chọn logme to nhì để vào ô kế tiếp
+                    train_loader, test_loader = original_train_data_list[second_max_index], original_test_data_list[second_max_index]
+
+                    need_to_change_list = list(range(max_class_current_task_list[second_max_index]-dataset.N_CLASSES_PER_TASK + 1, max_class_current_task_list[second_max_index]+1))
+                    stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+
+                    train_data_list[t] = train_loader
+                    test_data_list[t] = test_loader
+                    max_num_list[t] = max_class_current_task_list[second_max_index]
+                    position[t] = original_position[second_max_index]
+
+                    max_class_current_task_list.pop(random_num)
+                    original_train_data_list.pop(random_num)
+                    original_test_data_list.pop(random_num)
+                    original_position.pop(random_num)
+
+                    #chọn logme to nhất để vào ô cuối cùng còn trống
+                    blank_pos = len(train_data_list) - 1
+                    flag = len(train_data_list) - 1
+                    while flag >= 0:
+                        if hasattr(train_data_list[flag], "len"):
+                            if len(train_data_list[flag]) == 0:
+                                blank_pos = flag
+                                break
+                        else:
+                            flag = flag - 1
+                    
+                    train_data_list[blank_pos] = original_train_data_list[max_index]
+                    test_data_list[blank_pos] = original_test_data_list[max_index]
+                    max_num_list[blank_pos] = max_class_current_task_list[max_index]
+                    position[blank_pos] = original_position[max_index]
+
+                    print("Position now:", position)
+
+                    if max_index < second_max_index:
+                        max_class_current_task_list.pop(max_index)
+                        original_train_data_list.pop(max_index)
+                        original_test_data_list.pop(max_index)
+                        original_position.pop(max_index)
+
+                        max_class_current_task_list.pop(second_max_index-1)
+                        original_train_data_list.pop(second_max_index-1)
+                        original_test_data_list.pop(second_max_index-1)
+                        original_position.pop(second_max_index-1)
+
+                    else:
+                        max_class_current_task_list.pop(max_index)
+                        original_train_data_list.pop(max_index)
+                        original_test_data_list.pop(max_index)
+                        original_position.pop(max_index)
+
+                        max_class_current_task_list.pop(second_max_index)
+                        original_train_data_list.pop(second_max_index)
+                        original_test_data_list.pop(second_max_index)
+                        original_position.pop(second_max_index)
+
+                if len(original_train_data_list) == 1:
+                    train_loader, test_loader = original_train_data_list[0], original_test_data_list[0]
+                    need_to_change_list = list(range(max_class_current_task_list[0]-dataset.N_CLASSES_PER_TASK + 1, max_class_current_task_list[0]+1))
+                    stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+
+                    train_data_list[t] = train_loader
+                    test_data_list[t] = test_loader
+                    max_num_list[t] = max_class_current_task_list[0]
+                    position[t] = original_position[0]
+
+                    need_to_change_list = list(range(max_class_current_task_list[0]-dataset.N_CLASSES_PER_TASK + 1, max_class_current_task_list[0]+1))
+                    stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+
+                    max_class_current_task_list.pop(0)
+                    original_train_data_list.pop(0)
+                    original_test_data_list.pop(0)
+                    original_position.pop(0)
+                else:
+                    train_loader, test_loader = train_data_list[t], test_data_list[t]
+                    need_to_change_list = list(range(max_num_list[t]-dataset.N_CLASSES_PER_TASK + 1, max_num_list[t]+1))
+                    stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+
+            else:
+                all_logme_future = []
+                for j, train_data in enumerate(original_train_data_list):
+                    need_to_change_list = list(range(max_class_current_task_list[j]-dataset.N_CLASSES_PER_TASK + 1, max_class_current_task_list[j]+1))
+                    stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
+
+                    print("need_to_change:", need_to_change_list)
+
+                    all_logme_future.append(get_logme(model, dataset, train_data, t,
+                                            get_data_sample_from_current_task,
+                                            get_data_label_from_current_task,
+                                            need_to_change_list, stay_list,
+                                            cal_buffer = False))
+            
+                print("LogMe score for these tasks:", all_logme_future)
+
+                if args.task_selection == "random":
+                    random_num = random.choice(list(range(len(original_train_data_list)))) 
+                elif args.task_selection == "best":
+                    random_num = all_logme_future.index(max(all_logme_future))
+                elif args.task_selection == "worst":
+                    random_num = all_logme_future.index(min(all_logme_future))
+
+                print("Choose num:", random_num)
+                
+                train_loader, test_loader = original_train_data_list[random_num], original_test_data_list[random_num]
+
+                need_to_change_list = list(range(max_class_current_task_list[random_num]-dataset.N_CLASSES_PER_TASK + 1, max_class_current_task_list[random_num]+1))
                 stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
 
-                print("need_to_change:", need_to_change_list)
+                train_data_list[t] = train_loader
+                test_data_list[t] = test_loader
+                max_num_list[t] = max_class_current_task_list[random_num]
+                position[t] = original_position[random_num]
 
-                all_logme_future.append(get_logme(model, dataset, train_data, t,
-                                        get_data_sample_from_current_task,
-                                        get_data_label_from_current_task,
-                                        need_to_change_list, stay_list,
-                                        cal_buffer = False))
-            
-            print("LogMe score for these tasks:", all_logme_future)
-
-            if args.task_selection == "random":
-                random_num = random.choice(list(range(len(original_train_data_list)))) 
-            elif args.task_selection == "best":
-                random_num = all_logme_future.index(max(all_logme_future))
-            elif args.task_selection == "worst":
-                random_num = all_logme_future.index(min(all_logme_future))
-
-            print("Choose num:", random_num)
-            
-            train_loader, test_loader = original_train_data_list[random_num], original_test_data_list[random_num]
-
-            need_to_change_list = list(range(max_class_current_task_list[random_num]-dataset.N_CLASSES_PER_TASK + 1, max_class_current_task_list[random_num]+1))
-            stay_list = list(range(0, dataset.N_CLASSES_PER_TASK))
-
-            train_data_list.append(train_loader)
-            test_data_list.append(test_loader)
-            max_num_list.append(max_class_current_task_list[random_num])
-            position.append(original_position[random_num])
+                max_class_current_task_list.pop(random_num)
+                original_train_data_list.pop(random_num)
+                original_test_data_list.pop(random_num)
+                original_position.pop(random_num)
             
             leep_score.append(get_leep(model, dataset, train_data_list[t], t,
                                         get_data_sample_from_current_task,
@@ -405,11 +518,6 @@ def train(model: ContinualModel, dataset: ContinualDataset,
         logme_model_list.append(logme_model_score)
         logme_simple_model_1epoch_list.append(logme_simple_model_score_1epoch)
         logme_simple_model_50epoch_list.append(logme_simple_model_score_50epoch)
-
-        max_class_current_task_list.pop(random_num)
-        original_train_data_list.pop(random_num)
-        original_test_data_list.pop(random_num)
-        original_position.pop(random_num)
 
 
     # for t in range(dataset.N_TASKS):
